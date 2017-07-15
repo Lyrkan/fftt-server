@@ -1,0 +1,38 @@
+{
+  "name": "fftt-server",
+  "version": "1.0.0",
+  "description": "Final Fantasy Triple Triad server",
+  "scripts": {
+    "build": "tsc",
+    "lint": "tslint './src/**/*.ts'",
+    "start": "tsc && node dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=6.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lyrkan/fftt-server.git"
+  },
+  "author": "Vincent Le Biannic",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Lyrkan/fftt-server/issues"
+  },
+  "homepage": "https://github.com/Lyrkan/fftt-server#readme",
+  "dependencies": {
+    "@types/mongodb": "^2.2.7",
+    "@types/mongoose": "^4.7.18",
+    "@types/node": "^8.0.6",
+    "@types/uuid": "^3.0.0",
+    "chalk": "^2.0.1",
+    "mongoose": "^4.11.2",
+    "tslib": "^1.7.1",
+    "typescript": "^2.4.1",
+    "uuid": "^3.1.0"
+  },
+  "devDependencies": {
+    "tslint": "^5.5.0"
+  }
+}
