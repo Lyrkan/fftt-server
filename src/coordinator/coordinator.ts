@@ -1,3 +1,7 @@
+import * as fs from 'fs';
+import * as http from 'http';
+import * as socketio from 'socket.io';
+import * as socketioJwt from 'socketio-jwt';
 import { Game } from './games/game';
 import { GameStatus } from '../common/statuses/game-status';
 import { Logger } from '../common/services/logger';
@@ -9,21 +13,20 @@ import { NodeStatus } from '../common/statuses/node-status';
 export class Coordinator {
   private matchmaker: Matchmaker;
   private games: Game[];
-  private stopRequest: boolean;
   private running: boolean;
+  private stopRequest: boolean;
 
   /**
    * Constructor.
    *
-   * @param provider     A game provider
-   * @param tickInterval The interval between each Coordinator (ms)
-   * @param stopTimeout  The maximum amount of time allowed to stop the coordinator (ms)
+   * @param logger   An instance of the logger service
+   * @param provider A game provider
+   * @param config   Coordinator settings
    */
   public constructor(
     private logger: Logger,
     private provider: NodeProvider<any>,
-    private tickInterval: number = 5000,
-    private stopTimeout: number = 10000,
+    private config: CoordinatorConfiguration,
   ) {
     this.matchmaker = new Matchmaker(logger, provider);
     this.games = [];
@@ -38,6 +41,32 @@ export class Coordinator {
     this.stopRequest = false;
     this.running = true;
 
+    // Start websocket server
+    const server = http.createServer();
+    const io = socketio(server);
+
+    try {
+      const jwtPublicCert = fs.readFileSync(this.config.jwtPublicCert);
+      io.sockets.on('connection', socketioJwt.authorize({
+        secret: jwtPublicCert
+      })).on('authenticated', (socket: { decoded_token: any } & SocketIO.Socket) => {
+        this.logger.debug(
+          'Coordinator',
+          `New client connected: ${JSON.stringify(socket.decoded_token)}`
+        );
+      });
+    } catch (e) {
+      this.logger.error('Coordinator', 'Could not initialize JWT handling: ', e);
+      process.exit(255);
+    }
+
+    try {
+      await server.listen(this.config.port);
+    } catch (e) {
+      this.logger.error('Coordinator', `Could not start server on port ${this.config.port}: `, e);
+      process.exit(255);
+    }
+
     // Keep trying to find games
     while (!this.stopRequest) {
       this.logger.debug('Coordinator', 'Tick');
@@ -49,8 +78,21 @@ export class Coordinator {
       await this.matchmake();
 
       // Wait for next tick
-      await new Promise(resolve => setTimeout(resolve, this.tickInterval));
+      await new Promise(resolve => setTimeout(resolve, this.config.tickInterval));
     }
+
+    // Stop websocket server
+    await new Promise(resolve => {
+      if (server.listening) {
+        this.logger.info('Coordinator', 'Shutting down server');
+        server.close(() => {
+          resolve();
+        });
+      } else {
+        this.logger.warn('Coordinator', 'Server was not running');
+        resolve();
+      }
+    });
 
     this.running = false;
   }
@@ -68,16 +110,16 @@ export class Coordinator {
 
     // Wait for the running flag to be set to false or
     // for the STOP_TIMEOUT interval to be reached.
-    await new Promise(resolve => {
+    await new Promise((resolve, reject) => {
       const checkInterval = setInterval(_ => {
         const currentTimestamp = (new Date()).getTime();
         const delta = currentTimestamp - stopRequestTimestamp;
 
-        if (!this.running || (delta >= this.stopTimeout)) {
+        if (!this.running || (delta >= this.config.stopTimeout)) {
           clearInterval(checkInterval);
 
           if (this.running) {
-            throw new Error(`Coordinator: Stop request timed-out after ${delta}ms`);
+            reject(new Error(`Coordinator: Stop request timed-out after ${delta}ms`));
           }
 
           this.logger.info('Coordinator', 'Stopped');
@@ -164,4 +206,11 @@ export class Coordinator {
     this.logger.debug('Coordinator', `${newGames.length} new game(s)`);
     this.games.concat(newGames);
   }
+}
+
+export interface CoordinatorConfiguration {
+    port: number;
+    jwtPublicCert: string;
+    tickInterval: number;
+    stopTimeout: number;
 }

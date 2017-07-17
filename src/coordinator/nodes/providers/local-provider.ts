@@ -8,15 +8,9 @@ import { NodeNotFoundError } from '../errors/node-not-found-error';
 import { NodesLimitReachedError } from '../errors/nodes-limit-reached-error';
 
 export class LocalProvider extends NodeProvider<Node> {
-  private minPort: number;
-  private maxPort: number;
 
-  public constructor(logger: Logger, config: LocalNodeConfiguration) {
+  public constructor(logger: Logger, config: NodeConfiguration) {
     super(logger, config);
-
-    this.minPort = Math.min(config.minPort, config.maxPort);
-    this.maxPort = Math.max(config.maxPort, config.minPort);
-    this.maxNodes = Math.min(this.maxNodes, (this.maxPort - this.minPort));
   }
 
   public async createNode(playerIds: string[]): Promise<string> {
@@ -72,9 +66,4 @@ export class LocalProvider extends NodeProvider<Node> {
     const node = this.currentNodes.get(nodeId);
     return node ? node.getGameStatus() : GameStatus.UNKNOWN;
   }
-}
-
-export interface LocalNodeConfiguration extends NodeConfiguration {
-  minPort: number;
-  maxPort: number;
 }

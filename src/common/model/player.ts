@@ -1,5 +1,7 @@
 import { Document, model, Model, Schema } from 'mongoose';
 
+export const DEFAULT_RANK: number = 1500;
+
 const PlayerSchema = new Schema({
   playerId: String,
   rank: Number,

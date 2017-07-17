@@ -1,19 +1,47 @@
+import * as mongoose from 'mongoose';
 import { Coordinator } from './coordinator/coordinator';
+import { NodeProvider } from './coordinator/nodes/node-provider';
 import { LocalProvider } from './coordinator/nodes/providers/local-provider';
 import { Logger, LogLevel } from './common/services/logger';
 
-const logger = new Logger(LogLevel.DEBUG);
+// Load environment variables from .env file if available
+require('dotenv').config();
 
-logger.info('Main', 'Initializing...');
+// Init Logger
+const logLevel = process.env.LOG_LEVEL || LogLevel.INFO;
+if (!(logLevel in LogLevel)) {
+  throw new Error(`Invalid value for LOG_LEVEL environment variable: "${logLevel}"`);
+}
+const logger = new Logger(logLevel as LogLevel);
 
-const nodeProvider = new LocalProvider(logger, {
-  maxNodes: 10,
-  minPort: 9000,
-  maxPort: 9200,
+// Connect to MongoDB
+const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost/fftt';
+mongoose.connect(mongoURI, {useMongoClient: true} as any);
+mongoose.connection.on('error', () => {
+  logger.error('Main', `Could not connect to MongoDB using the following URI: "${mongoURI}"`);
+  process.exit(255);
 });
 
-const coordinator = new Coordinator(logger, nodeProvider);
+// Init node provider and coordinator
+logger.info('Main', 'Initializing...');
 
+const nodeProvider: NodeProvider<any> = new LocalProvider(
+  logger,
+  { maxNodes: parseInt(process.env.COORDINATOR_MAX_NODES || '10', 10) }
+);
+
+const coordinator = new Coordinator(
+  logger,
+  nodeProvider,
+  {
+    port: parseInt(process.env.COORDINATOR_PORT || '8080', 10),
+    jwtPublicCert: process.env.JWT_PUBLIC_CERT || 'certs/jwt.pub',
+    tickInterval: parseInt(process.env.COORDINATOR_TICK_INTERVAL || '5000', 10),
+    stopTimeout: parseInt(process.env.COORDINATOR_STOP_TIMEOUT || '10000', 10),
+  }
+);
+
+// Start coordinator
 coordinator.start();
 
 process.on('SIGINT', async () => {
@@ -23,7 +51,7 @@ process.on('SIGINT', async () => {
     await coordinator.stop();
     process.exit(0);
   } catch (e) {
-    logger.error('Main', 'Could not stop coordinator (timeout)');
+    logger.error('Main', 'Could not stop coordinator: ', e);
     process.exit(255);
   }
 });

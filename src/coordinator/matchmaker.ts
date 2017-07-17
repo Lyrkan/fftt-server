@@ -3,9 +3,7 @@ import { Game } from './games/game';
 import { Logger } from '../common/services/logger';
 import { NodesLimitReachedError } from './nodes/errors/nodes-limit-reached-error';
 import { NodeProvider } from './nodes/node-provider';
-import { IPlayer, PlayerModel } from '../common/model/player';
-
-const DEFAULT_RANK: number = 1500;
+import { IPlayer, PlayerModel, DEFAULT_RANK } from '../common/model/player';
 
 export class Matchmaker {
   private playersQueue: Set<string>;
@@ -13,6 +11,7 @@ export class Matchmaker {
   /**
    * Constructor.
    *
+   * @param logger   An instance of the logger service
    * @param provider A node provider
    */
   public constructor(private logger: Logger, private provider: NodeProvider<any>) {
@@ -56,8 +55,9 @@ export class Matchmaker {
         );
 
         startedGames.push(game);
-
         this.logger.info('Matchmaker', `Started game "${game.id}"`);
+
+        // TODO Send game info to players
 
         // Remove players from the queue
         for (const player of group) {
@@ -86,51 +86,49 @@ export class Matchmaker {
    * Split a single unidimensional array of player identifiers
    * into multiple groups that can be used to create games.
    *
-   * @param players An array of player identifiers
+   * @param playerIds An array of player identifiers
    */
   private async groupPlayers(playerIds: string[]): Promise<string[][]> {
     this.logger.debug('Matchmaker', `Trying to group ${playerIds.length} player(s)`);
 
-    // Sort players by descending rank
-    const rankedPlayers: IPlayer[] = (await Promise.all(playerIds.map(async id => {
-      let player: IPlayer | null = null;
-
+    // Retrieve players and their rank
+    const rankedPlayers: IPlayer[] = [];
+    for (const playerId of playerIds) {
       // Try to retrieve player from the db first
       try {
-        player = await PlayerModel.findOne({userId: id});
+        const player = await PlayerModel.findOne({userId: playerId});
 
-        if (!player) {
+        if (player) {
+          rankedPlayers.push(player);
+        } else {
           // If the player is missing in the db, create it with the default rank
           try {
             const newPlayer = new PlayerModel({
-              playerId: id,
+              playerId,
               rank: DEFAULT_RANK,
             });
 
             await newPlayer.save();
-
-            player = newPlayer;
+            rankedPlayers.push(newPlayer);
           } catch (e) {
-            this.logger.warn(
+            this.logger.error(
               'Matchmaker',
-              `An error occured while trying to create new player "${id}": `,
+              `An error occured while trying to create new player "${playerId}": `,
               e
             );
           }
         }
       } catch (e) {
-        this.logger.warn(
+        this.logger.error(
           'Matchmaker',
-          `An error occured while tyring to retrieve player "${id}": `,
+          `An error occured while tyring to retrieve player "${playerId}": `,
           e
         );
       }
+    }
 
-      return player;
-    })))
-    .filter(player => null !== player)
-    .map(player => player as IPlayer)
-    .sort((playerA, playerB) => {
+    // Sort players based on their rank
+    const sortedRankedPlayers = rankedPlayers.sort((playerA, playerB) => {
       if (playerA.rank < playerB.rank) {
         return 1;
       } else if (playerA.rank > playerB.rank) {
@@ -145,7 +143,7 @@ export class Matchmaker {
     let groupIndex = 0;
     let playerIndex = 0;
 
-    for (const player of rankedPlayers) {
+    for (const player of sortedRankedPlayers) {
       if (0 === playerIndex) {
         groups[groupIndex] = [];
       }
