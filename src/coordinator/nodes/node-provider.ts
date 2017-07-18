@@ -3,9 +3,8 @@ import { Logger } from '../../common/services/logger';
 import { NodeInfo } from './node-info';
 import { Player } from '../../common/model/player';
 
-export abstract class NodeProvider<T> {
+export abstract class NodeProvider<T, U extends NodeConfiguration> {
   protected currentNodes: Map<string, T>;
-  protected maxNodes: number;
 
   /**
    * Constructor.
@@ -13,9 +12,8 @@ export abstract class NodeProvider<T> {
    * @param logger An instance of the logger service
    * @param config Settings for this node provider
    */
-  public constructor(protected logger: Logger, config: NodeConfiguration) {
+  public constructor(protected logger: Logger, protected config: U) {
     this.currentNodes = new Map<string, T>();
-    this.maxNodes = config.maxNodes;
   }
 
   /**
@@ -52,4 +50,7 @@ export abstract class NodeProvider<T> {
 
 export interface NodeConfiguration {
   maxNodes: number;
+  minPort: number;
+  maxPort: number;
+  jwtPublicCert: string;
 }

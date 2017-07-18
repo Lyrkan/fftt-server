@@ -6,14 +6,14 @@ import { NodeNotFoundError } from '../errors/node-not-found-error';
 import { NodesLimitReachedError } from '../errors/nodes-limit-reached-error';
 import { Player } from '../../../common/model/player';
 
-export class DockerProvider extends NodeProvider<string> {
+export class DockerProvider extends NodeProvider<string, NodeConfiguration> {
   public constructor(logger: Logger, config: NodeConfiguration) {
     super(logger, config);
   }
 
   public async createNode(players: Player[]): Promise<string> {
-    if ((this.maxNodes > 0) && (this.currentNodes.size >= this.maxNodes)) {
-      throw new NodesLimitReachedError(this.maxNodes);
+    if ((this.config.maxNodes > 0) && (this.currentNodes.size >= this.config.maxNodes)) {
+      throw new NodesLimitReachedError(this.config.maxNodes);
     }
 
     throw new Error('DockerProvider is not implemented yet');

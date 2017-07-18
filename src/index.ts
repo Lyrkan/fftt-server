@@ -1,7 +1,7 @@
 import * as mongoose from 'mongoose';
 import { Coordinator } from './coordinator/coordinator';
 import { NodeProvider } from './coordinator/nodes/node-provider';
-import { LocalProvider } from './coordinator/nodes/providers/local-provider';
+import { LocalProvider, LocalNodeConfiguration } from './coordinator/nodes/providers/local-provider';
 import { Logger, LogLevel } from './common/services/logger';
 
 // Load environment variables from .env file if available
@@ -25,9 +25,15 @@ mongoose.connection.on('error', () => {
 // Init node provider and coordinator
 logger.info('Main', 'Initializing...');
 
-const nodeProvider: NodeProvider<any> = new LocalProvider(
+const nodeProvider: NodeProvider<any, LocalNodeConfiguration> = new LocalProvider(
   logger,
-  { maxNodes: parseInt(process.env.COORDINATOR_MAX_NODES || '10', 10) }
+  {
+    maxNodes: parseInt(process.env.PROVIDER_MAX_NODES || '10', 10),
+    minPort: parseInt(process.env.PROVIDER_MIN_PORT || '9000', 10),
+    maxPort: parseInt(process.env.PROVIDER_MAX_PORT || '9999', 10),
+    host: process.env.LOCAL_PROVIDER_HOST,
+    jwtPublicCert: process.env.JWT_PUBLIC_CERT || 'certs/jwt.pub',
+  }
 );
 
 const coordinator = new Coordinator(

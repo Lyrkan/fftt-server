@@ -1,4 +1,3 @@
-import { GameState } from './game-state';
 import { GameStatus } from '../common/statuses/game-status';
 import { Logger } from '../common/services/logger';
 import { NodeStatus } from '../common/statuses/node-status';
@@ -6,22 +5,22 @@ import { Player } from '../common/model/player';
 
 export class Node {
   private status: NodeStatus;
-  private gameState: GameState;
 
-  public constructor(
-    private logger: Logger,
-    public readonly id: string,
-    public readonly players: Player[],
-  ) {
+  /**
+   * Constructor.
+   *
+   * @param logger An instance of the logger service
+   * @param config Node settings
+   */
+  public constructor(private logger: Logger, private config: NodeConfiguration) {
     this.status = NodeStatus.STOPPED;
-    this.gameState = new GameState();
   }
 
   /**
    * Start the node.
    */
   public async start(): Promise<void> {
-    this.logger.info('Node', `Starting node "${this.id}"`);
+    this.logger.info('Node', `Starting node "${this.getNodeId()}"`);
     this.status = NodeStatus.STARTING;
 
     // TODO
@@ -33,12 +32,19 @@ export class Node {
    * Stop the node.
    */
   public async stop(): Promise<void> {
-    this.logger.info('Node', `Stopping node "${this.id}"`);
+    this.logger.info('Node', `Stopping node "${this.getNodeId()}"`);
     this.status = NodeStatus.STOPPING;
 
     // TODO
 
     this.status = NodeStatus.STOPPED;
+  }
+
+  /**
+   * Return the ID of the this node.
+   */
+  public getNodeId(): string {
+    return this.config.nodeId;
   }
 
   /**
@@ -52,6 +58,23 @@ export class Node {
    * Return the status of the game.
    */
   public getGameStatus(): GameStatus {
-    return this.gameState.getGameStatus();
+    // TODO
+    return GameStatus.UNKNOWN;
   }
+
+  /**
+   * Return the port the node is listening to.
+   */
+  public getPort(): number|null {
+    // TODO
+    return null;
+  }
+}
+
+export interface NodeConfiguration {
+  nodeId: string,
+  jwtPublicCert: string;
+  minPort: number;
+  maxPort: number;
+  players: Player[];
 }

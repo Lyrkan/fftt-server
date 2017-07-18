@@ -1,4 +1,5 @@
 import * as uuid from 'uuid';
+import * as os from 'os';
 import { GameStatus } from '../../../common/statuses/game-status';
 import { Logger } from '../../../common/services/logger';
 import { NodeInfo } from '../node-info';
@@ -9,26 +10,36 @@ import { NodesLimitReachedError } from '../errors/nodes-limit-reached-error';
 import { NodeStatus } from '../../../common/statuses/node-status';
 import { Player } from '../../../common/model/player';
 
-export class LocalProvider extends NodeProvider<Node> {
-
-  public constructor(logger: Logger, config: NodeConfiguration) {
+export class LocalProvider extends NodeProvider<Node, LocalNodeConfiguration> {
+  public constructor(logger: Logger, config: LocalNodeConfiguration) {
     super(logger, config);
   }
 
   public async createNode(players: Player[]): Promise<string> {
-    if ((this.maxNodes > 0) && (this.currentNodes.size >= this.maxNodes)) {
-      throw new NodesLimitReachedError(this.maxNodes);
+    if ((this.config.maxNodes > 0) && (this.currentNodes.size >= this.config.maxNodes)) {
+      throw new NodesLimitReachedError(this.config.maxNodes);
     }
 
-    const node = new Node(this.logger, uuid.v4(), players);
-    this.currentNodes.set(node.id, node);
+    const nodeId = uuid.v4();
+    const node = new Node(
+      this.logger,
+      {
+        nodeId,
+        jwtPublicCert: this.config.jwtPublicCert,
+        minPort: this.config.minPort,
+        maxPort: this.config.maxPort,
+        players
+      }
+    );
+
+    this.currentNodes.set(nodeId, node);
 
     try {
       await node.start();
-      return node.id;
+      return nodeId;
     } catch (e) {
-      this.logger.error('LocalProvider', `Could not start node "${node.id}: `, e);
-      this.currentNodes.delete(node.id);
+      this.logger.error('LocalProvider', `Could not start node "${nodeId}: `, e);
+      this.currentNodes.delete(nodeId);
       throw e;
     }
   }
@@ -59,8 +70,8 @@ export class LocalProvider extends NodeProvider<Node> {
     const node = this.currentNodes.get(nodeId);
     return {
       nodeId,
-      host: '127.0.0.1', // TODO Retrieve IP or host
-      port: 8081, // TODO Retrieve port
+      host: this.config.host || this.getLocalIpAddress(),
+      port: node ? node.getPort() : null,
       status: node ? node.getStatus() : NodeStatus.UNKNOWN
     };
   }
@@ -73,4 +84,25 @@ export class LocalProvider extends NodeProvider<Node> {
     const node = this.currentNodes.get(nodeId);
     return node ? node.getGameStatus() : GameStatus.UNKNOWN;
   }
+
+  private getLocalIpAddress(): string|null {
+    const interfaces = os.networkInterfaces();
+    for (const ifaceName in interfaces) {
+      if (interfaces.hasOwnProperty(ifaceName)) {
+        for (const ifaceInfo in interfaces[ifaceName]) {
+          if (interfaces[ifaceName].hasOwnProperty(ifaceInfo)) {
+            const address = interfaces[ifaceName][ifaceInfo];
+            if (address.family === 'IPv4' && !address.internal) {
+              return address.address;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+}
+
+export interface LocalNodeConfiguration extends NodeConfiguration {
+  host?: string | null;
 }

@@ -3,7 +3,7 @@ import { GameStatus } from '../common/statuses/game-status';
 import { Logger } from '../common/services/logger';
 import { Matchmaker } from './matchmaker';
 import { NodeNotFoundError } from './nodes/errors/node-not-found-error';
-import { NodeProvider } from './nodes/node-provider';
+import { NodeProvider, NodeConfiguration } from './nodes/node-provider';
 import { NodeStatus } from '../common/statuses/node-status';
 import { Server } from './server';
 
@@ -28,7 +28,7 @@ export class Coordinator {
    */
   public constructor(
     private logger: Logger,
-    private provider: NodeProvider<any>,
+    private provider: NodeProvider<any, NodeConfiguration>,
     private config: CoordinatorConfiguration,
   ) {
     this.matchmaker = new Matchmaker(logger, provider);
@@ -194,8 +194,8 @@ export class Coordinator {
 }
 
 export interface CoordinatorConfiguration {
-    port: number;
-    jwtPublicCert: string;
-    tickInterval: number;
-    stopTimeout: number;
+  port: number;
+  jwtPublicCert: string;
+  tickInterval: number;
+  stopTimeout: number;
 }

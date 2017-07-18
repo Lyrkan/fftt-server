@@ -2,7 +2,7 @@ import { Game, GameModel } from '../common/model/game';
 import { GameStatus } from '../common/statuses/game-status';
 import { Logger } from '../common/services/logger';
 import { NodesLimitReachedError } from './nodes/errors/nodes-limit-reached-error';
-import { NodeProvider } from './nodes/node-provider';
+import { NodeProvider, NodeConfiguration } from './nodes/node-provider';
 import { Player, PlayerModel } from '../common/model/player';
 
 /**
@@ -19,7 +19,10 @@ export class Matchmaker {
    * @param logger   An instance of the logger service
    * @param provider A node provider
    */
-  public constructor(private logger: Logger, private provider: NodeProvider<any>) {
+  public constructor(
+    private logger: Logger,
+    private provider: NodeProvider<any, NodeConfiguration>
+  ) {
     this.playersQueue = new Set<string>();
   }
 
