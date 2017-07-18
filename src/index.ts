@@ -37,7 +37,7 @@ const coordinator = new Coordinator(
     port: parseInt(process.env.COORDINATOR_PORT || '8080', 10),
     jwtPublicCert: process.env.JWT_PUBLIC_CERT || 'certs/jwt.pub',
     tickInterval: parseInt(process.env.COORDINATOR_TICK_INTERVAL || '5000', 10),
-    stopTimeout: parseInt(process.env.COORDINATOR_STOP_TIMEOUT || '10000', 10),
+    stopTimeout: parseInt(process.env.COORDINATOR_STOP_TIMEOUT || '30000', 10),
   }
 );
 

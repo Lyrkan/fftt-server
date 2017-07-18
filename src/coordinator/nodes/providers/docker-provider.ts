@@ -1,16 +1,17 @@
 import { GameStatus } from '../../../common/statuses/game-status';
 import { Logger } from '../../../common/services/logger';
+import { NodeInfo } from '../node-info';
 import { NodeProvider, NodeConfiguration } from '../node-provider';
-import { NodeStatus } from '../../../common/statuses/node-status';
 import { NodeNotFoundError } from '../errors/node-not-found-error';
 import { NodesLimitReachedError } from '../errors/nodes-limit-reached-error';
+import { Player } from '../../../common/model/player';
 
-export class LocalProvider extends NodeProvider<string> {
+export class DockerProvider extends NodeProvider<string> {
   public constructor(logger: Logger, config: NodeConfiguration) {
     super(logger, config);
   }
 
-  public async createNode(playerIds: string[]): Promise<string> {
+  public async createNode(players: Player[]): Promise<string> {
     if ((this.maxNodes > 0) && (this.currentNodes.size >= this.maxNodes)) {
       throw new NodesLimitReachedError(this.maxNodes);
     }
@@ -26,7 +27,7 @@ export class LocalProvider extends NodeProvider<string> {
     throw new Error('DockerProvider is not implemented yet');
   }
 
-  public async getNodeStatus(nodeId: string): Promise<NodeStatus> {
+  public async getNodeInfo(nodeId: string): Promise<NodeInfo> {
     if (!this.currentNodes.has(nodeId)) {
       throw new NodeNotFoundError(nodeId);
     }

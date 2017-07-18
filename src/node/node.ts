@@ -2,6 +2,7 @@ import { GameState } from './game-state';
 import { GameStatus } from '../common/statuses/game-status';
 import { Logger } from '../common/services/logger';
 import { NodeStatus } from '../common/statuses/node-status';
+import { Player } from '../common/model/player';
 
 export class Node {
   private status: NodeStatus;
@@ -10,7 +11,7 @@ export class Node {
   public constructor(
     private logger: Logger,
     public readonly id: string,
-    public readonly playerIds: string[],
+    public readonly players: Player[],
   ) {
     this.status = NodeStatus.STOPPED;
     this.gameState = new GameState();

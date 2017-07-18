@@ -1,7 +1,7 @@
 export enum NodeStatus {
-  UNKNOWN,
-  STARTING,
-  RUNNING,
-  STOPPING,
-  STOPPED,
+  UNKNOWN  = 'Unknown',
+  STARTING = 'Starting',
+  RUNNING  = 'Running',
+  STOPPING = 'Stopping',
+  STOPPED  = 'Stopped',
 }

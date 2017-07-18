@@ -3,16 +3,18 @@ import { Document, model, Model, Schema } from 'mongoose';
 export const DEFAULT_RANK: number = 1500;
 
 const PlayerSchema = new Schema({
-  playerId: String,
+  _id: String,
+  nickname: String,
   rank: Number,
 });
 
-export interface IPlayer extends Document {
-  playerId: string;
+export interface Player extends Document {
+  _id: string;
+  nickname: string;
   rank: number;
 }
 
-export const PlayerModel: Model<IPlayer> = model<IPlayer>(
+export const PlayerModel: Model<Player> = model<Player>(
   'Player',
   PlayerSchema
 );

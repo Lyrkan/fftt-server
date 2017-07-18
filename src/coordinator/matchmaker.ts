@@ -1,10 +1,15 @@
-import * as uuid from 'uuid';
-import { Game } from './games/game';
+import { Game, GameModel } from '../common/model/game';
+import { GameStatus } from '../common/statuses/game-status';
 import { Logger } from '../common/services/logger';
 import { NodesLimitReachedError } from './nodes/errors/nodes-limit-reached-error';
 import { NodeProvider } from './nodes/node-provider';
-import { IPlayer, PlayerModel, DEFAULT_RANK } from '../common/model/player';
+import { Player, PlayerModel } from '../common/model/player';
 
+/**
+ * The role of the Matchmaker is to manage a queue of users waiting
+ * for a game. It first tries to match users based on their current
+ * rank, and then creates games accordingly.
+ */
 export class Matchmaker {
   private playersQueue: Set<string>;
 
@@ -47,21 +52,19 @@ export class Matchmaker {
     // Start a new game for each group
     for (const group of groups) {
       try {
-        // Start a new game
-        const game = new Game(
-          uuid.v4(),
-          await this.provider.createNode(group),
-          group
-        );
+        const newGame = new GameModel({
+          nodeId: await this.provider.createNode(group),
+          players: group.map(player => player._id),
+          status: GameStatus.IN_PROGRESS,
+        });
+        await newGame.save();
 
-        startedGames.push(game);
-        this.logger.info('Matchmaker', `Started game "${game.id}"`);
-
-        // TODO Send game info to players
+        startedGames.push(newGame);
+        this.logger.info('Matchmaker', `Started game "${newGame.id}"`);
 
         // Remove players from the queue
         for (const player of group) {
-          this.removePlayer(player);
+          this.removePlayer(player._id);
         }
       } catch (e) {
         if (e instanceof NodesLimitReachedError) {
@@ -88,35 +91,24 @@ export class Matchmaker {
    *
    * @param playerIds An array of player identifiers
    */
-  private async groupPlayers(playerIds: string[]): Promise<string[][]> {
+  private async groupPlayers(playerIds: string[]): Promise<Player[][]> {
     this.logger.debug('Matchmaker', `Trying to group ${playerIds.length} player(s)`);
 
     // Retrieve players and their rank
-    const rankedPlayers: IPlayer[] = [];
+    const rankedPlayers: Player[] = [];
     for (const playerId of playerIds) {
       // Try to retrieve player from the db first
       try {
-        const player = await PlayerModel.findOne({userId: playerId});
+        const player = await PlayerModel.findById(playerId);
 
         if (player) {
           rankedPlayers.push(player);
         } else {
-          // If the player is missing in the db, create it with the default rank
-          try {
-            const newPlayer = new PlayerModel({
-              playerId,
-              rank: DEFAULT_RANK,
-            });
-
-            await newPlayer.save();
-            rankedPlayers.push(newPlayer);
-          } catch (e) {
-            this.logger.error(
-              'Matchmaker',
-              `An error occured while trying to create new player "${playerId}": `,
-              e
-            );
-          }
+          this.logger.warn(
+            'Matchmaker',
+            `Player "${playerId}" is registered but could not be found in the database`,
+          );
+          this.removePlayer(playerId);
         }
       } catch (e) {
         this.logger.error(
@@ -139,7 +131,7 @@ export class Matchmaker {
     });
 
     // Group players
-    const groups: string[][] = [];
+    const groups: Player[][] = [];
     let groupIndex = 0;
     let playerIndex = 0;
 
@@ -148,7 +140,7 @@ export class Matchmaker {
         groups[groupIndex] = [];
       }
 
-      groups[groupIndex].push(player.playerId);
+      groups[groupIndex].push(player);
 
       playerIndex++;
 

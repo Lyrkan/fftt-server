@@ -1,17 +1,20 @@
-import * as fs from 'fs';
-import * as http from 'http';
-import * as socketio from 'socket.io';
-import * as socketioJwt from 'socketio-jwt';
-import { Game } from './games/game';
+import { Game } from '../common/model/game';
 import { GameStatus } from '../common/statuses/game-status';
 import { Logger } from '../common/services/logger';
 import { Matchmaker } from './matchmaker';
 import { NodeNotFoundError } from './nodes/errors/node-not-found-error';
 import { NodeProvider } from './nodes/node-provider';
 import { NodeStatus } from '../common/statuses/node-status';
+import { Server } from './server';
 
+/**
+ * The role of the Coordinator is to manage game nodes.
+ * Basically, it creates nodes when needed (new games) and
+ * stops them if a game has ended.
+ */
 export class Coordinator {
   private matchmaker: Matchmaker;
+  private server: Server;
   private games: Game[];
   private running: boolean;
   private stopRequest: boolean;
@@ -29,6 +32,7 @@ export class Coordinator {
     private config: CoordinatorConfiguration,
   ) {
     this.matchmaker = new Matchmaker(logger, provider);
+    this.server = new Server(logger, config);
     this.games = [];
   }
 
@@ -41,29 +45,10 @@ export class Coordinator {
     this.stopRequest = false;
     this.running = true;
 
-    // Start websocket server
-    const server = http.createServer();
-    const io = socketio(server);
-
     try {
-      const jwtPublicCert = fs.readFileSync(this.config.jwtPublicCert);
-      io.sockets.on('connection', socketioJwt.authorize({
-        secret: jwtPublicCert
-      })).on('authenticated', (socket: { decoded_token: any } & SocketIO.Socket) => {
-        this.logger.debug(
-          'Coordinator',
-          `New client connected: ${JSON.stringify(socket.decoded_token)}`
-        );
-      });
+      await this.server.start();
     } catch (e) {
-      this.logger.error('Coordinator', 'Could not initialize JWT handling: ', e);
-      process.exit(255);
-    }
-
-    try {
-      await server.listen(this.config.port);
-    } catch (e) {
-      this.logger.error('Coordinator', `Could not start server on port ${this.config.port}: `, e);
+      this.logger.error('Coordinator', `Could not start server: `, e);
       process.exit(255);
     }
 
@@ -82,17 +67,7 @@ export class Coordinator {
     }
 
     // Stop websocket server
-    await new Promise(resolve => {
-      if (server.listening) {
-        this.logger.info('Coordinator', 'Shutting down server');
-        server.close(() => {
-          resolve();
-        });
-      } else {
-        this.logger.warn('Coordinator', 'Server was not running');
-        resolve();
-      }
-    });
+    await this.server.stop();
 
     this.running = false;
   }
@@ -143,7 +118,8 @@ export class Coordinator {
       let nodeStatus = NodeStatus.UNKNOWN;
 
       try {
-        nodeStatus = await this.provider.getNodeStatus(game.nodeId);
+        const nodeInfo = await this.provider.getNodeInfo(game.nodeId);
+        nodeStatus = nodeInfo.status;
       } catch (e) {
         if (e instanceof NodeNotFoundError) {
           this.logger.warn(
@@ -165,13 +141,13 @@ export class Coordinator {
           'Coordinator',
           `Status of game "${game.id}" set to "ended" since its node isn't running anymore`
         );
-        game.setStatus(GameStatus.ENDED);
+        game.status = GameStatus.ENDED;
       } else if (NodeStatus.RUNNING === nodeStatus) {
         // Update game status
-        let gameStatus = GameStatus.UNKNOWN;
+        game.status = GameStatus.UNKNOWN;
 
         try {
-          gameStatus = await this.provider.getGameStatus(game.nodeId);
+          game.status = await this.provider.getGameStatus(game.nodeId);
         } catch (e) {
           this.logger.warn(
             'Coordinator',
@@ -180,9 +156,7 @@ export class Coordinator {
           );
         }
 
-        game.setStatus(gameStatus);
-
-        if (game.getStatus() === GameStatus.ENDED) {
+        if (game.status === GameStatus.ENDED) {
           this.logger.info(
             'Coordinator',
             `Game "${game.id}" ended, shutting down node "${game.nodeId}"`
@@ -190,10 +164,21 @@ export class Coordinator {
           await this.provider.stopNode(game.nodeId);
         }
       }
+
+      try {
+        // Persist new game status
+        game.save();
+      } catch (e) {
+        this.logger.warn(
+          'Coordinator',
+          `Could not save new status "${game.status}" for game "${game.id}: `,
+          e
+        );
+      }
     }
 
     // Remove ended games
-    this.games = this.games.filter(game => (game.getStatus() !== GameStatus.ENDED));
+    this.games = this.games.filter(game => (game.status !== GameStatus.ENDED));
   }
 
   /**
