@@ -1,7 +1,6 @@
 import * as uuid from 'uuid';
 import * as os from 'os';
 import { GameStatus } from '../../../common/statuses/game-status';
-import { Logger } from '../../../common/services/logger';
 import { NodeInfo } from '../node-info';
 import { NodeProvider, NodeConfiguration } from '../node-provider';
 import { Node } from '../../../node/node';
@@ -11,10 +10,6 @@ import { NodeStatus } from '../../../common/statuses/node-status';
 import { Player } from '../../../common/model/player';
 
 export class LocalProvider extends NodeProvider<Node, LocalNodeConfiguration> {
-  public constructor(logger: Logger, config: LocalNodeConfiguration) {
-    super(logger, config);
-  }
-
   public async createNode(players: Player[]): Promise<string> {
     if ((this.config.maxNodes > 0) && (this.currentNodes.size >= this.config.maxNodes)) {
       throw new NodesLimitReachedError(this.config.maxNodes);

@@ -4,7 +4,8 @@ import * as socketio from 'socket.io';
 import * as socketioJwt from 'socketio-jwt';
 import { CoordinatorConfiguration } from './coordinator';
 import { Logger } from '../common/services/logger';
-import { PlayerModel, DEFAULT_RANK } from '../common/model/player';
+import { Matchmaker } from './matchmaker';
+import { Player, PlayerModel, DEFAULT_RANK } from '../common/model/player';
 
 /**
  * Socket.IO server.
@@ -22,6 +23,7 @@ export class Server {
    */
   public constructor(
     private logger: Logger,
+    private matchmaker: Matchmaker,
     private config: CoordinatorConfiguration,
   ) {
     this.httpServer = http.createServer();
@@ -67,61 +69,113 @@ export class Server {
     try {
       const jwtPublicCert = fs.readFileSync(this.config.jwtPublicCert);
       this.ioServer.sockets.on('connection', socketioJwt.authorize({
-        secret: jwtPublicCert
-      })).on('authenticated', (socket: { decoded_token: any } & SocketIO.Socket) => {
-        // Retrieve player information from JWT
-        const decodedToken = socket.decoded_token;
-        const id = decodedToken.sub;
-        const username = decodedToken.username || id;
-
-        this.logger.debug(
-          'Server',
-          `New client connected: ${JSON.stringify(decodedToken)}`
-        );
-
-        if (id) {
-          // If the user has an id, check if it exists in the database, create it otherwise
-          PlayerModel.findById(id).then(player => {
-            if (!player) {
-              // If the player is missing in the db, create it with the default rank
-              const newPlayer = new PlayerModel({
-                _id: id,
-                username,
-                rank: DEFAULT_RANK,
-              });
-
-              newPlayer.save().then(p => {
-                this.logger.debug('Server', `Player "${id}" did not exist and was created`);
-                this.sockets.set(id, socket);
-              }).catch(e => {
-                this.logger.error(
-                  'Server',
-                  `An error occured while trying to create new player "${id}": `,
-                  e
-                );
-                socket.disconnect();
-              });
-            } else {
-              this.logger.debug(
-                'Server',
-                `Player "${id}" was found in the database (rank: ${player.rank})`
-              );
-              this.sockets.set(player._id, socket);
-            }
-          });
-        } else {
-          this.logger.warn(
-            'Server',
-            `New client didn't have an ID in its token: ${JSON.stringify(decodedToken)}`
-          );
-          socket.disconnect();
-        }
+        secret: jwtPublicCert,
+        callback: 10000,
+      })).on('authenticated', (socket: { decoded_token: DecodedToken } & SocketIO.Socket) => {
+        this.onPlayerAuthenticated(socket, socket.decoded_token);
       });
-
-      // TODO Handle disconnect event
     } catch (e) {
       this.logger.error('Server', 'Could not initialize JWT handling: ', e);
       process.exit(255);
     }
   }
+
+  /**
+   * Called when an authenticated player connects to
+   * the server.
+   *
+   * @param socket       SocketIO Socket
+   * @param decodedToken Decoded JWT
+   */
+  private onPlayerAuthenticated(socket: SocketIO.Socket, decodedToken: DecodedToken) {
+    this.logger.debug(
+      'Server',
+      `New client connected from ${socket.request.connection.remoteAddress}`
+    );
+
+    // Retrieve player ID from JWT
+    const playerId = decodedToken.sub;
+
+    if (playerId) {
+      // If the user has an id, check if it exists in the database, create it otherwise
+      PlayerModel.findById(playerId).then(player => {
+        if (!player) {
+          // If the player is missing in the db, create it with the default rank
+          const newPlayer = new PlayerModel({
+            _id: playerId,
+            username: decodedToken.username || playerId,
+            picture: decodedToken.picture,
+            rank: DEFAULT_RANK,
+          });
+
+          newPlayer.save().then(p => {
+            this.logger.debug('Server', `Player "${playerId}" did not exist and was created`);
+            this.onPlayerRetrieved(socket, p);
+          }).catch(e => {
+            this.logger.error(
+              'Server',
+              `An error occured while trying to create new player "${playerId}": `,
+              e
+            );
+            socket.disconnect();
+          });
+        } else {
+          this.logger.debug(
+            'Server',
+            `Player "${playerId}" was found in the database (rank: ${player.rank})`
+          );
+          this.onPlayerRetrieved(socket, player);
+        }
+      });
+    } else {
+      this.logger.warn(
+        'Server',
+        `New client didn't have an ID in its token: ${JSON.stringify(decodedToken)}`
+      );
+      socket.disconnect();
+    }
+  }
+
+  /**
+   * Called when a player is successfully created
+   * or retrieved from the database after it connected
+   * to the server.
+   *
+   * @param socket SocketIO Socket
+   * @param player Player
+   */
+  private onPlayerRetrieved(socket: SocketIO.Socket, player: Player) {
+    this.logger.info('Server', `Player "${player._id}" joined the server`);
+    this.sockets.set(player._id, socket);
+
+    socket.on('disconnect', () => {
+      this.onPlayerDisconnected(player);
+    });
+
+    socket.on('startSearch', () => {
+      this.matchmaker.addPlayer(player._id);
+    });
+
+    socket.on('stopSearch', () => {
+      this.matchmaker.removePlayer(player._id);
+    });
+  }
+
+  /**
+   * Called when an authenticated player disconnects
+   * from the server.
+   *
+   * @param player Player
+   */
+  private onPlayerDisconnected(player: Player) {
+    this.logger.info('Server', `Player "${player._id}" disconnected`);
+    this.matchmaker.removePlayer(player._id);
+    this.sockets.delete(player._id);
+  }
+}
+
+interface DecodedToken {
+  sub: string;
+  username?: string;
+  picture?: string;
 }

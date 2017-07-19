@@ -1,5 +1,4 @@
 import { GameStatus } from '../../../common/statuses/game-status';
-import { Logger } from '../../../common/services/logger';
 import { NodeInfo } from '../node-info';
 import { NodeProvider, NodeConfiguration } from '../node-provider';
 import { NodeNotFoundError } from '../errors/node-not-found-error';
@@ -7,10 +6,6 @@ import { NodesLimitReachedError } from '../errors/nodes-limit-reached-error';
 import { Player } from '../../../common/model/player';
 
 export class DockerProvider extends NodeProvider<string, NodeConfiguration> {
-  public constructor(logger: Logger, config: NodeConfiguration) {
-    super(logger, config);
-  }
-
   public async createNode(players: Player[]): Promise<string> {
     if ((this.config.maxNodes > 0) && (this.currentNodes.size >= this.config.maxNodes)) {
       throw new NodesLimitReachedError(this.config.maxNodes);

@@ -13,6 +13,7 @@ import { Server } from './server';
  * stops them if a game has ended.
  */
 export class Coordinator {
+  private config: CoordinatorConfiguration;
   private matchmaker: Matchmaker;
   private server: Server;
   private games: Game[];
@@ -29,10 +30,11 @@ export class Coordinator {
   public constructor(
     private logger: Logger,
     private provider: NodeProvider<any, NodeConfiguration>,
-    private config: CoordinatorConfiguration,
+    config: CoordinatorConfiguration,
   ) {
+    this.config = { ...config };
     this.matchmaker = new Matchmaker(logger, provider);
-    this.server = new Server(logger, config);
+    this.server = new Server(logger, this.matchmaker, config);
     this.games = [];
   }
 
@@ -40,6 +42,11 @@ export class Coordinator {
    * Start the coordinator loop.
    */
   public async start(): Promise<void> {
+    if (this.running) {
+      this.logger.debug('Coordinator', 'Coordinator is already running');
+      return;
+    }
+
     this.logger.info('Coordinator', 'Starting');
 
     this.stopRequest = false;
@@ -76,6 +83,11 @@ export class Coordinator {
    * Try to stop the coordinator.
    */
   public async stop(): Promise<void> {
+    if (this.stopRequest || !this.running) {
+      this.logger.debug('Coordinator', 'Coordinator is already stopped or being stopped');
+      return;
+    }
+
     this.logger.info('Coordinator', 'Stopping');
 
     const stopRequestTimestamp = (new Date()).getTime();
@@ -84,7 +96,7 @@ export class Coordinator {
     this.stopRequest = true;
 
     // Wait for the running flag to be set to false or
-    // for the STOP_TIMEOUT interval to be reached.
+    // for the stopTimeout interval to be reached.
     await new Promise((resolve, reject) => {
       const checkInterval = setInterval(_ => {
         const currentTimestamp = (new Date()).getTime();
@@ -161,6 +173,9 @@ export class Coordinator {
             'Coordinator',
             `Game "${game.id}" ended, shutting down node "${game.nodeId}"`
           );
+
+          // TODO Get game results and persist them
+
           await this.provider.stopNode(game.nodeId);
         }
       }

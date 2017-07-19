@@ -1,8 +1,11 @@
 import * as mongoose from 'mongoose';
 import { Coordinator } from './coordinator/coordinator';
 import { NodeProvider } from './coordinator/nodes/node-provider';
-import { LocalProvider, LocalNodeConfiguration } from './coordinator/nodes/providers/local-provider';
 import { Logger, LogLevel } from './common/services/logger';
+import {
+  LocalProvider,
+  LocalNodeConfiguration
+} from './coordinator/nodes/providers/local-provider';
 
 // Load environment variables from .env file if available
 require('dotenv').config();
@@ -50,7 +53,7 @@ const coordinator = new Coordinator(
 // Start coordinator
 coordinator.start();
 
-process.on('SIGINT', async () => {
+async function onQuitSignal() {
   logger.info('Main', 'Received SIGINT, stopping coordinator...');
 
   try {
@@ -60,4 +63,6 @@ process.on('SIGINT', async () => {
     logger.error('Main', 'Could not stop coordinator: ', e);
     process.exit(255);
   }
-});
+}
+
+process.on('SIGINT', onQuitSignal);

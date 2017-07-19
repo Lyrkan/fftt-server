@@ -4,13 +4,15 @@ export const DEFAULT_RANK: number = 1500;
 
 const PlayerSchema = new Schema({
   _id: String,
-  nickname: String,
+  username: String,
+  picture: String,
   rank: Number,
 });
 
 export interface Player extends Document {
   _id: string;
-  nickname: string;
+  username: string;
+  picture?: string | null;
   rank: number;
 }
 

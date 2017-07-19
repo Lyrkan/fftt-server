@@ -1,10 +1,15 @@
+/* tslint:disable:no-namespace */
+
 declare namespace SocketIOJwt {
   export interface AuthorizeOptions {
-    secret?: Buffer,
-    handshake?: boolean,
+    secret?: Buffer;
+    handshake?: boolean;
+    callback?: boolean | number;
   }
+
+  export type AuthorizeCallback = ((socket: SocketIO.Socket) => void);
 }
 
 declare module 'socketio-jwt' {
-  export function authorize(opts: SocketIOJwt.AuthorizeOptions): ((socket: SocketIO.Socket) => void);
+  export function authorize(opts: SocketIOJwt.AuthorizeOptions): SocketIOJwt.AuthorizeCallback;
 }

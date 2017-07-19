@@ -4,6 +4,7 @@ import { NodeStatus } from '../common/statuses/node-status';
 import { Player } from '../common/model/player';
 
 export class Node {
+  private config: NodeConfiguration;
   private status: NodeStatus;
 
   /**
@@ -12,7 +13,8 @@ export class Node {
    * @param logger An instance of the logger service
    * @param config Node settings
    */
-  public constructor(private logger: Logger, private config: NodeConfiguration) {
+  public constructor(private logger: Logger, config: NodeConfiguration) {
+    this.config = { ...config };
     this.status = NodeStatus.STOPPED;
   }
 
@@ -72,7 +74,7 @@ export class Node {
 }
 
 export interface NodeConfiguration {
-  nodeId: string,
+  readonly nodeId: string;
   jwtPublicCert: string;
   minPort: number;
   maxPort: number;
