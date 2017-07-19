@@ -53,16 +53,19 @@ const coordinator = new Coordinator(
 // Start coordinator
 coordinator.start();
 
-async function onQuitSignal() {
-  logger.info('Main', 'Received SIGINT, stopping coordinator...');
+function onStopSignal(signal: string) {
+  return async () => {
+    logger.info('Main', `Received "${signal}" signal, stopping coordinator...`);
 
-  try {
-    await coordinator.stop();
-    process.exit(0);
-  } catch (e) {
-    logger.error('Main', 'Could not stop coordinator: ', e);
-    process.exit(255);
-  }
+    try {
+      await coordinator.stop();
+      process.exit(0);
+    } catch (e) {
+      logger.error('Main', 'Could not stop coordinator: ', e);
+      process.exit(255);
+    }
+  };
 }
 
-process.on('SIGINT', onQuitSignal);
+process.on('SIGINT', onStopSignal('SIGINT'));
+process.on('SIGTERM', onStopSignal('SIGTERM'));
