@@ -1,9 +1,10 @@
 import { Game, GameModel } from '../common/model/game';
 import { GameStatus } from '../common/statuses/game-status';
-import { Logger } from '../common/services/logger';
+import { Logger } from '../common/services/logger/logger';
 import { NodesLimitReachedError } from './nodes/errors/nodes-limit-reached-error';
 import { NodeProvider, NodeConfiguration } from './nodes/node-provider';
 import { Player, PlayerModel } from '../common/model/player';
+import { StandardRuleset } from '../common/rules/presets/standard-ruleset';
 
 /**
  * The role of the Matchmaker is to manage a queue of users waiting
@@ -45,6 +46,13 @@ export class Matchmaker {
   }
 
   /**
+   * Return a copy of the current players queue.
+   */
+  public getPlayersQueue(): Set<string> {
+    return new Set<string>(this.playersQueue);
+  }
+
+  /**
    * Check if groups can be formed using queued players
    * and start games accordingly.
    */
@@ -56,7 +64,7 @@ export class Matchmaker {
     for (const group of groups) {
       try {
         const newGame = new GameModel({
-          nodeId: await this.provider.createNode(group),
+          nodeId: await this.provider.createNode(group, StandardRuleset),
           players: group.map(player => player._id),
           status: GameStatus.IN_PROGRESS,
         });

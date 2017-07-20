@@ -1,7 +1,8 @@
 import { GameStatus } from '../../common/statuses/game-status';
-import { Logger } from '../../common/services/logger';
+import { Logger } from '../../common/services/logger/logger';
 import { NodeInfo } from './node-info';
 import { Player } from '../../common/model/player';
+import { Ruleset } from '../../common/rules/ruleset';
 
 export abstract class NodeProvider<T, U extends NodeConfiguration> {
   protected currentNodes: Map<string, T>;
@@ -21,7 +22,7 @@ export abstract class NodeProvider<T, U extends NodeConfiguration> {
    *
    * @param players The players associated to the new node.
    */
-  public abstract async createNode(players: Player[]): Promise<string>;
+  public abstract async createNode(players: Player[], ruleset: Ruleset): Promise<string>;
 
   /**
    * Stop a node.

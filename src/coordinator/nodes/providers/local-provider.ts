@@ -8,9 +8,10 @@ import { NodeNotFoundError } from '../errors/node-not-found-error';
 import { NodesLimitReachedError } from '../errors/nodes-limit-reached-error';
 import { NodeStatus } from '../../../common/statuses/node-status';
 import { Player } from '../../../common/model/player';
+import { Ruleset } from '../../../common/rules/ruleset';
 
 export class LocalProvider extends NodeProvider<Node, LocalNodeConfiguration> {
-  public async createNode(players: Player[]): Promise<string> {
+  public async createNode(players: Player[], ruleset: Ruleset): Promise<string> {
     if ((this.config.maxNodes > 0) && (this.currentNodes.size >= this.config.maxNodes)) {
       throw new NodesLimitReachedError(this.config.maxNodes);
     }
@@ -23,7 +24,8 @@ export class LocalProvider extends NodeProvider<Node, LocalNodeConfiguration> {
         jwtPublicCert: this.config.jwtPublicCert,
         minPort: this.config.minPort,
         maxPort: this.config.maxPort,
-        players
+        players,
+        ruleset,
       }
     );
 

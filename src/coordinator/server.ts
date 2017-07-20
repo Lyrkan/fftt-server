@@ -3,7 +3,7 @@ import * as http from 'http';
 import * as socketio from 'socket.io';
 import * as socketioJwt from 'socketio-jwt';
 import { CoordinatorConfiguration } from './coordinator';
-import { Logger } from '../common/services/logger';
+import { Logger } from '../common/services/logger/logger';
 import { Matchmaker } from './matchmaker';
 import { Player, PlayerModel, DEFAULT_RANK } from '../common/model/player';
 
@@ -41,19 +41,33 @@ export class Server {
       throw new Error(`Server is already running on port ${this.httpServer.address().port}`);
     }
 
-    await this.httpServer.listen(this.config.port);
+    await new Promise((resolve, reject) => {
+      const rejectListener = (e: Error) => { reject(e); };
+      this.httpServer
+        .on('error', rejectListener)
+        .listen(this.config.port, () => {
+          this.logger.info('Server', `Server is now listening to port ${this.config.port}`);
+          this.httpServer.removeListener('on', rejectListener);
+          resolve();
+        });
+    });
   }
 
   /**
    * Stop the server.
    */
   public async stop() {
-    await new Promise(resolve => {
+    await new Promise((resolve, reject) => {
       if (this.httpServer && this.httpServer.listening) {
         this.logger.info('Server', 'Stopping coordinator server');
-        this.httpServer.close(() => {
-          resolve();
-        });
+        const rejectListener = (e: Error) => { reject(e); };
+        this.httpServer
+          .on('error', rejectListener)
+          .close(() => {
+            this.logger.info('Server', 'Server stopped');
+            this.httpServer.removeListener('error', rejectListener);
+            resolve();
+          });
       } else {
         this.logger.warn('Server', 'Server was not running');
         resolve();
@@ -76,7 +90,7 @@ export class Server {
       });
     } catch (e) {
       this.logger.error('Server', 'Could not initialize JWT handling: ', e);
-      process.exit(255);
+      throw e;
     }
   }
 
@@ -106,6 +120,7 @@ export class Server {
             username: decodedToken.username || playerId,
             picture: decodedToken.picture,
             rank: DEFAULT_RANK,
+            cards: [],
           });
 
           newPlayer.save().then(p => {
@@ -147,6 +162,8 @@ export class Server {
   private onPlayerRetrieved(socket: SocketIO.Socket, player: Player) {
     this.logger.info('Server', `Player "${player._id}" joined the server`);
     this.sockets.set(player._id, socket);
+
+    // TODO Check if the player has cards
 
     socket.on('disconnect', () => {
       this.onPlayerDisconnected(player);

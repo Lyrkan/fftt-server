@@ -1,11 +1,8 @@
 import * as mongoose from 'mongoose';
 import { Coordinator } from './coordinator/coordinator';
-import { NodeProvider } from './coordinator/nodes/node-provider';
-import { Logger, LogLevel } from './common/services/logger';
-import {
-  LocalProvider,
-  LocalNodeConfiguration
-} from './coordinator/nodes/providers/local-provider';
+import { LogLevel } from './common/services/logger/logger';
+import { PrettyLogger } from './common/services/logger/pretty-logger';
+import { LocalProvider } from './coordinator/nodes/providers/local-provider';
 
 // Load environment variables from .env file if available
 require('dotenv').config();
@@ -15,7 +12,7 @@ const logLevel = process.env.LOG_LEVEL || LogLevel.INFO;
 if (!(logLevel in LogLevel)) {
   throw new Error(`Invalid value for LOG_LEVEL environment variable: "${logLevel}"`);
 }
-const logger = new Logger(logLevel as LogLevel);
+const logger = new PrettyLogger(logLevel as LogLevel);
 
 // Connect to MongoDB
 const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost/fftt';
@@ -28,7 +25,7 @@ mongoose.connection.on('error', () => {
 // Init node provider and coordinator
 logger.info('Main', 'Initializing...');
 
-const nodeProvider: NodeProvider<any, LocalNodeConfiguration> = new LocalProvider(
+const nodeProvider = new LocalProvider(
   logger,
   {
     maxNodes: parseInt(process.env.PROVIDER_MAX_NODES || '10', 10),
@@ -51,7 +48,12 @@ const coordinator = new Coordinator(
 );
 
 // Start coordinator
-coordinator.start();
+coordinator.start().then(() => {
+  logger.info('Main', 'Coordinator is now running');
+}).catch(e => {
+  logger.error('Main', `Could not start server: `, e);
+  process.exit(255);
+});
 
 function onStopSignal(signal: string) {
   return async () => {

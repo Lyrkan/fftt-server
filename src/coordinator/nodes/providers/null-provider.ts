@@ -1,18 +1,27 @@
+import * as uuid from 'uuid';
 import { GameStatus } from '../../../common/statuses/game-status';
+import { Logger } from '../../../common/services/logger/logger';
 import { NodeInfo } from '../node-info';
 import { NodeProvider, NodeConfiguration } from '../node-provider';
 import { NodeNotFoundError } from '../errors/node-not-found-error';
-import { NodesLimitReachedError } from '../errors/nodes-limit-reached-error';
+import { NodeStatus } from '../../../common/statuses/node-status';
 import { Player } from '../../../common/model/player';
 import { Ruleset } from '../../../common/rules/ruleset';
 
-export class DockerProvider extends NodeProvider<string, NodeConfiguration> {
-  public async createNode(players: Player[], ruleset: Ruleset): Promise<string> {
-    if ((this.config.maxNodes > 0) && (this.currentNodes.size >= this.config.maxNodes)) {
-      throw new NodesLimitReachedError(this.config.maxNodes);
-    }
+export class NullProvider extends NodeProvider<string, NodeConfiguration> {
+  public constructor(logger: Logger) {
+    super(logger, {
+      jwtPublicCert: '',
+      minPort: 8000,
+      maxPort: 8000,
+      maxNodes: 0,
+    });
+  }
 
-    throw new Error('DockerProvider is not implemented yet');
+  public async createNode(players: Player[], ruleset: Ruleset): Promise<string> {
+    const nodeId = uuid.v4();
+    this.currentNodes.set(nodeId, nodeId);
+    return nodeId;
   }
 
   public async stopNode(nodeId: string): Promise<void> {
@@ -20,7 +29,7 @@ export class DockerProvider extends NodeProvider<string, NodeConfiguration> {
       throw new NodeNotFoundError(nodeId);
     }
 
-    throw new Error('DockerProvider is not implemented yet');
+    this.currentNodes.delete(nodeId);
   }
 
   public async getNodeInfo(nodeId: string): Promise<NodeInfo> {
@@ -28,7 +37,12 @@ export class DockerProvider extends NodeProvider<string, NodeConfiguration> {
       throw new NodeNotFoundError(nodeId);
     }
 
-    throw new Error('DockerProvider is not implemented yet');
+    return {
+      host: null,
+      port: null,
+      nodeId,
+      status: NodeStatus.UNKNOWN,
+    };
   }
 
   public async getGameStatus(nodeId: string): Promise<GameStatus> {
@@ -36,6 +50,6 @@ export class DockerProvider extends NodeProvider<string, NodeConfiguration> {
       throw new NodeNotFoundError(nodeId);
     }
 
-    throw new Error('DockerProvider is not implemented yet');
+    return GameStatus.UNKNOWN;
   }
 }

@@ -7,6 +7,7 @@ const PlayerSchema = new Schema({
   username: String,
   picture: String,
   rank: Number,
+  cards: [String],
 });
 
 export interface Player extends Document {
@@ -14,6 +15,7 @@ export interface Player extends Document {
   username: string;
   picture?: string | null;
   rank: number;
+  cards: string[];
 }
 
 export const PlayerModel: Model<Player> = model<Player>(

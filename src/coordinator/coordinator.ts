@@ -1,6 +1,6 @@
 import { Game } from '../common/model/game';
 import { GameStatus } from '../common/statuses/game-status';
-import { Logger } from '../common/services/logger';
+import { Logger } from '../common/services/logger/logger';
 import { Matchmaker } from './matchmaker';
 import { NodeNotFoundError } from './nodes/errors/node-not-found-error';
 import { NodeProvider, NodeConfiguration } from './nodes/node-provider';
@@ -49,34 +49,15 @@ export class Coordinator {
 
     this.logger.info('Coordinator', 'Starting');
 
+    // Set running flags
     this.stopRequest = false;
     this.running = true;
 
-    try {
-      await this.server.start();
-    } catch (e) {
-      this.logger.error('Coordinator', `Could not start server: `, e);
-      process.exit(255);
-    }
+    // Start listening for connections
+    await this.server.start();
 
-    // Keep trying to find games
-    while (!this.stopRequest) {
-      this.logger.debug('Coordinator', 'Tick');
-
-      // Update game statuses and remove ended games
-      await this.updateGameStatuses();
-
-      // Call matchmaker
-      await this.matchmake();
-
-      // Wait for next tick
-      await new Promise(resolve => setTimeout(resolve, this.config.tickInterval));
-    }
-
-    // Stop websocket server
-    await this.server.stop();
-
-    this.running = false;
+    // Start the runloop (don't await here)
+    this.runLoop();
   }
 
   /**
@@ -114,6 +95,27 @@ export class Coordinator {
         }
       }, 100);
     });
+  }
+
+  private async runLoop(): Promise<void> {
+    // Keep trying to find games
+    while (!this.stopRequest) {
+      this.logger.debug('Coordinator', 'Tick');
+
+      // Update game statuses and remove ended games
+      await this.updateGameStatuses();
+
+      // Call matchmaker
+      await this.matchmake();
+
+      // Wait for next tick
+      await new Promise(resolve => setTimeout(resolve, this.config.tickInterval));
+    }
+
+    // Stop websocket server
+    await this.server.stop();
+
+    this.running = false;
   }
 
   /**

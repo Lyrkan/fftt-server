@@ -1,7 +1,8 @@
 import { GameStatus } from '../common/statuses/game-status';
-import { Logger } from '../common/services/logger';
+import { Logger } from '../common/services/logger/logger';
 import { NodeStatus } from '../common/statuses/node-status';
 import { Player } from '../common/model/player';
+import { Ruleset } from '../common/rules/ruleset';
 
 export class Node {
   private config: NodeConfiguration;
@@ -22,6 +23,11 @@ export class Node {
    * Start the node.
    */
   public async start(): Promise<void> {
+    if (this.status !== NodeStatus.STOPPED) {
+      this.logger.debug('Node', `Node "${this.getNodeId()}" is already running`);
+      return;
+    }
+
     this.logger.info('Node', `Starting node "${this.getNodeId()}"`);
     this.status = NodeStatus.STARTING;
 
@@ -34,6 +40,11 @@ export class Node {
    * Stop the node.
    */
   public async stop(): Promise<void> {
+    if (this.status !== NodeStatus.RUNNING) {
+      this.logger.debug('Node', `Node "${this.getNodeId()}" is not running`);
+      return;
+    }
+
     this.logger.info('Node', `Stopping node "${this.getNodeId()}"`);
     this.status = NodeStatus.STOPPING;
 
@@ -79,4 +90,5 @@ export interface NodeConfiguration {
   minPort: number;
   maxPort: number;
   players: Player[];
+  ruleset: Ruleset;
 }
