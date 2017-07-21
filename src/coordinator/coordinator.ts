@@ -34,7 +34,7 @@ export class Coordinator {
   ) {
     this.config = { ...config };
     this.matchmaker = new Matchmaker(logger, provider);
-    this.server = new Server(logger, this.matchmaker, config);
+    this.server = new Server(logger, this.matchmaker, this.provider, config);
     this.games = [];
   }
 

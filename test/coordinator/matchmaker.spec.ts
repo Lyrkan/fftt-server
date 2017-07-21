@@ -19,23 +19,23 @@ describe('Matchmaker', () => {
     it('should be able to add players to the queue', () => {
       expect(matchmaker.getPlayersQueue().size).to.equal(0);
 
-      matchmaker.addPlayer('player1');
+      matchmaker.addPlayer('player1', () => { /* Noop */ });
       expect(matchmaker.getPlayersQueue().size).to.equal(1);
 
-      matchmaker.addPlayer('player2');
+      matchmaker.addPlayer('player2', () => { /* Noop */ });
       expect(matchmaker.getPlayersQueue().size).to.equal(2);
     });
 
     it('should not add the same player twice to the queue', () => {
       expect(matchmaker.getPlayersQueue().size).to.equal(0);
 
-      matchmaker.addPlayer('player1');
-      matchmaker.addPlayer('player2');
+      matchmaker.addPlayer('player1', () => { /* Noop */ });
+      matchmaker.addPlayer('player2', () => { /* Noop */ });
       expect(matchmaker.getPlayersQueue().size).to.equal(2);
 
-      matchmaker.addPlayer('player1');
-      matchmaker.addPlayer('player1');
-      matchmaker.addPlayer('player2');
+      matchmaker.addPlayer('player1', () => { /* Noop */ });
+      matchmaker.addPlayer('player1', () => { /* Noop */ });
+      matchmaker.addPlayer('player2', () => { /* Noop */ });
       expect(matchmaker.getPlayersQueue().size).to.equal(2);
     });
   });
@@ -44,8 +44,8 @@ describe('Matchmaker', () => {
     it('should be able to remove players from the queue', () => {
       expect(matchmaker.getPlayersQueue().size).to.equal(0);
 
-      matchmaker.addPlayer('player1');
-      matchmaker.addPlayer('player2');
+      matchmaker.addPlayer('player1', () => { /* Noop */ });
+      matchmaker.addPlayer('player2', () => { /* Noop */ });
       expect(matchmaker.getPlayersQueue().size).to.equal(2);
 
       matchmaker.removePlayer('player1');

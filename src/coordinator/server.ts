@@ -3,8 +3,10 @@ import * as http from 'http';
 import * as socketio from 'socket.io';
 import * as socketioJwt from 'socketio-jwt';
 import { CoordinatorConfiguration } from './coordinator';
+import { Game } from '../common/model/game';
 import { Logger } from '../common/services/logger/logger';
 import { Matchmaker } from './matchmaker';
+import { NodeProvider, NodeConfiguration } from './nodes/node-provider';
 import { Player, PlayerModel, DEFAULT_RANK } from '../common/model/player';
 
 /**
@@ -24,6 +26,7 @@ export class Server {
   public constructor(
     private logger: Logger,
     private matchmaker: Matchmaker,
+    private nodeProvider: NodeProvider<any, NodeConfiguration>,
     private config: CoordinatorConfiguration,
   ) {
     this.httpServer = http.createServer();
@@ -165,12 +168,21 @@ export class Server {
 
     // TODO Check if the player has cards
 
+    // TODO Check if player is already in a game
+
     socket.on('disconnect', () => {
       this.onPlayerDisconnected(player);
     });
 
     socket.on('startSearch', () => {
-      this.matchmaker.addPlayer(player._id);
+      this.matchmaker.addPlayer(player._id, (game: Game) => {
+        this.logger.debug(
+          'Server',
+          `Found a game for player "${player._id}": "${game._id}" on node "${game.nodeId}"`
+        );
+
+        this.sendNodeInfo(player, game);
+      });
     });
 
     socket.on('stopSearch', () => {
@@ -188,6 +200,34 @@ export class Server {
     this.logger.info('Server', `Player "${player._id}" disconnected`);
     this.matchmaker.removePlayer(player._id);
     this.sockets.delete(player._id);
+  }
+
+  /**
+   * Retrieve information about the node a game is
+   * running on and send them to a player.
+   *
+   * @param player Player
+   * @param game   Active game
+   */
+  private async sendNodeInfo(player: Player, game: Game) {
+    const socket = this.sockets.get(player._id);
+    try {
+      if (!socket) {
+        throw new Error('Player is not associated to any active socket');
+      }
+
+      // Retrieve node info from provider and send it to the player
+      socket.emit(
+        'nodeInfo',
+        await this.nodeProvider.getNodeInfo(game.nodeId),
+      );
+    } catch (e) {
+      this.logger.debug(
+        'Server',
+        `Could not send game information to player "${player._id}": `,
+        e
+      );
+    }
   }
 }
 

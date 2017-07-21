@@ -12,7 +12,7 @@ import { StandardRuleset } from '../common/rules/presets/standard-ruleset';
  * rank, and then creates games accordingly.
  */
 export class Matchmaker {
-  private playersQueue: Set<string>;
+  private playersQueue: Map<string, (g: Game) => void>;
 
   /**
    * Constructor.
@@ -24,16 +24,17 @@ export class Matchmaker {
     private logger: Logger,
     private provider: NodeProvider<any, NodeConfiguration>
   ) {
-    this.playersQueue = new Set<string>();
+    this.playersQueue = new Map<string, (g: Game) => void>();
   }
 
   /**
    * Add a player to the waiting queue.
    *
    * @param playerId A player identifier
+   * @param callback A function called when a game has been found
    */
-  public addPlayer(playerId: string): void {
-    this.playersQueue.add(playerId);
+  public addPlayer(playerId: string, callback: (g: Game) => void): void {
+    this.playersQueue.set(playerId, callback);
   }
 
   /**
@@ -46,10 +47,11 @@ export class Matchmaker {
   }
 
   /**
-   * Return a copy of the current players queue.
+   * Return a copy of the current players queue without
+   * the associated callbacks.
    */
   public getPlayersQueue(): Set<string> {
-    return new Set<string>(this.playersQueue);
+    return new Set<string>(this.playersQueue.keys());
   }
 
   /**
@@ -58,7 +60,7 @@ export class Matchmaker {
    */
   public async tick(): Promise<Game[]> {
     const startedGames: Game[] = [];
-    const groups =  await this.groupPlayers([...this.playersQueue]);
+    const groups =  await this.groupPlayers(this.getPlayersQueue());
 
     // Start a new game for each group
     for (const group of groups) {
@@ -73,8 +75,12 @@ export class Matchmaker {
         startedGames.push(newGame);
         this.logger.info('Matchmaker', `Started game "${newGame.id}"`);
 
-        // Remove players from the queue
+        // Call callbacks and remove players from the queue
         for (const player of group) {
+          const callback = this.playersQueue.get(player._id);
+          if (callback) {
+            callback(newGame);
+          }
           this.removePlayer(player._id);
         }
       } catch (e) {
@@ -102,8 +108,8 @@ export class Matchmaker {
    *
    * @param playerIds An array of player identifiers
    */
-  private async groupPlayers(playerIds: string[]): Promise<Player[][]> {
-    this.logger.debug('Matchmaker', `Trying to group ${playerIds.length} player(s)`);
+  private async groupPlayers(playerIds: Set<string>): Promise<Player[][]> {
+    this.logger.debug('Matchmaker', `Trying to group ${playerIds.size} player(s)`);
 
     // Retrieve players and their rank
     const rankedPlayers: Player[] = [];
