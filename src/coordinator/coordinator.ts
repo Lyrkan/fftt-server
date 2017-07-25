@@ -14,8 +14,6 @@ import { Server } from './server';
  */
 export class Coordinator {
   private config: CoordinatorConfiguration;
-  private matchmaker: Matchmaker;
-  private server: Server;
   private games: Game[];
   private running: boolean;
   private stopRequest: boolean;
@@ -23,18 +21,20 @@ export class Coordinator {
   /**
    * Constructor.
    *
-   * @param logger   An instance of the logger service
-   * @param provider A game provider
-   * @param config   Coordinator settings
+   * @param logger     An instance of the logger service
+   * @param provider   A game provider
+   * @param matchmaker A matchmaker
+   * @param server     A SocketIO server
+   * @param config     Coordinator settings
    */
   public constructor(
     private logger: Logger,
     private provider: NodeProvider<any, NodeConfiguration>,
+    private matchmaker: Matchmaker,
+    private server: Server,
     config: CoordinatorConfiguration,
   ) {
     this.config = { ...config };
-    this.matchmaker = new Matchmaker(logger, provider);
-    this.server = new Server(logger, this.matchmaker, this.provider, config);
     this.games = [];
   }
 
@@ -211,8 +211,6 @@ export class Coordinator {
 }
 
 export interface CoordinatorConfiguration {
-  port: number;
-  jwtPublicCert: string;
   tickInterval: number;
   stopTimeout: number;
 }

@@ -1,4 +1,5 @@
 export interface Card {
+  readonly id: string;
   readonly values: CardValues;
   readonly element?: CardElement;
 }

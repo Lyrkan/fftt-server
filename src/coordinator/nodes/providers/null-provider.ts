@@ -15,6 +15,7 @@ export class NullProvider extends NodeProvider<string, NodeConfiguration> {
       minPort: 8000,
       maxPort: 8000,
       maxNodes: 0,
+      nodeTimeout: 600,
     });
   }
 

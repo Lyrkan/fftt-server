@@ -24,6 +24,7 @@ export class LocalProvider extends NodeProvider<Node, LocalNodeConfiguration> {
         jwtPublicCert: this.config.jwtPublicCert,
         minPort: this.config.minPort,
         maxPort: this.config.maxPort,
+        timeout: this.config.nodeTimeout,
         players,
         ruleset,
       }

@@ -2,17 +2,19 @@ import * as fs from 'fs';
 import * as http from 'http';
 import * as socketio from 'socket.io';
 import * as socketioJwt from 'socketio-jwt';
-import { CoordinatorConfiguration } from './coordinator';
+import { Cards } from '../common/cards/cards';
 import { Game } from '../common/model/game';
 import { Logger } from '../common/services/logger/logger';
 import { Matchmaker } from './matchmaker';
 import { NodeProvider, NodeConfiguration } from './nodes/node-provider';
 import { Player, PlayerModel, DEFAULT_RANK } from '../common/model/player';
+import { randomCards } from '../common/cards/card-utils';
 
 /**
  * Socket.IO server.
  */
 export class Server {
+  private config: ServerConfiguration;
   private httpServer: http.Server;
   private ioServer: SocketIO.Server;
   private sockets: Map<string, SocketIO.Socket>;
@@ -27,8 +29,9 @@ export class Server {
     private logger: Logger,
     private matchmaker: Matchmaker,
     private nodeProvider: NodeProvider<any, NodeConfiguration>,
-    private config: CoordinatorConfiguration,
+    config: ServerConfiguration,
   ) {
+    this.config = { ...config };
     this.httpServer = http.createServer();
     this.ioServer = socketio(this.httpServer);
     this.initialize();
@@ -104,7 +107,7 @@ export class Server {
    * @param socket       SocketIO Socket
    * @param decodedToken Decoded JWT
    */
-  private onPlayerAuthenticated(socket: SocketIO.Socket, decodedToken: DecodedToken) {
+  private onPlayerAuthenticated(socket: SocketIO.Socket, decodedToken: DecodedToken): void {
     this.logger.debug(
       'Server',
       `New client connected from ${socket.request.connection.remoteAddress}`
@@ -162,11 +165,16 @@ export class Server {
    * @param socket SocketIO Socket
    * @param player Player
    */
-  private onPlayerRetrieved(socket: SocketIO.Socket, player: Player) {
+  private onPlayerRetrieved(socket: SocketIO.Socket, player: Player): void {
     this.logger.info('Server', `Player "${player._id}" joined the server`);
     this.sockets.set(player._id, socket);
 
-    // TODO Check if the player has cards
+    // Check if the player has cards, or drop some of them
+    if (!player.cards.length) {
+      this.dropCards(player, 10);
+    }
+
+    // TODO Send player info
 
     // TODO Check if player is already in a game
 
@@ -196,7 +204,7 @@ export class Server {
    *
    * @param player Player
    */
-  private onPlayerDisconnected(player: Player) {
+  private onPlayerDisconnected(player: Player): void {
     this.logger.info('Server', `Player "${player._id}" disconnected`);
     this.matchmaker.removePlayer(player._id);
     this.sockets.delete(player._id);
@@ -209,7 +217,7 @@ export class Server {
    * @param player Player
    * @param game   Active game
    */
-  private async sendNodeInfo(player: Player, game: Game) {
+  private async sendNodeInfo(player: Player, game: Game): Promise<void> {
     const socket = this.sockets.get(player._id);
     try {
       if (!socket) {
@@ -229,6 +237,36 @@ export class Server {
       );
     }
   }
+
+  /**
+   * Give random cards to a player.
+   *
+   * @param player Player
+   * @param count  Number of cards to give to the player
+   */
+  private async dropCards(player: Player, count: number = 1): Promise<void> {
+    const newCards = randomCards(count);
+    try {
+      player.cards = player.cards.concat(newCards);
+      await player.save();
+
+      const socket = this.sockets.get(player._id);
+      if (socket) {
+        socket.emit('newCards', newCards.map(cardId => Cards.get(cardId)));
+      }
+    } catch (e) {
+      this.logger.error(
+        'Server',
+        `Could not drop cards for player "${player._id}": `,
+        e
+      );
+    }
+  }
+}
+
+export interface ServerConfiguration {
+  port: number;
+  jwtPublicCert: string;
 }
 
 interface DecodedToken {

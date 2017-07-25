@@ -9,9 +9,13 @@ describe('Matchmaker', () => {
 
   beforeEach(() => {
     const logger = new NullLogger();
+    const provider = new NullProvider(logger);
     matchmaker = new Matchmaker(
       logger,
-      new NullProvider(logger)
+      provider,
+      {
+        maxRankDifference: 500,
+      }
     );
   });
 

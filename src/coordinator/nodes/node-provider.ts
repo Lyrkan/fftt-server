@@ -54,4 +54,5 @@ export interface NodeConfiguration {
   minPort: number;
   maxPort: number;
   jwtPublicCert: string;
+  nodeTimeout: number;
 }

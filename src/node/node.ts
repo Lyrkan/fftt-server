@@ -7,6 +7,7 @@ import { Ruleset } from '../common/rules/ruleset';
 export class Node {
   private config: NodeConfiguration;
   private status: NodeStatus;
+  private nodeTimeout?: NodeJS.Timer|null;
 
   /**
    * Constructor.
@@ -33,7 +34,9 @@ export class Node {
 
     // TODO
 
+    this.logger.info('Node', `Node "${this.getNodeId()}" is now running`);
     this.status = NodeStatus.RUNNING;
+    this.startNodeTimeoutCheck();
   }
 
   /**
@@ -46,10 +49,12 @@ export class Node {
     }
 
     this.logger.info('Node', `Stopping node "${this.getNodeId()}"`);
+    this.stopNodeTimeoutCheck();
     this.status = NodeStatus.STOPPING;
 
     // TODO
 
+    this.logger.info('Node', `Node "${this.getNodeId()}" is now stopped`);
     this.status = NodeStatus.STOPPED;
   }
 
@@ -82,6 +87,38 @@ export class Node {
     // TODO
     return null;
   }
+
+  /**
+   * Start a timer that checks if the node has
+   * been running for too long and stops it if
+   * that's the case.
+   */
+  private startNodeTimeoutCheck(): void {
+    // Stop previous node timeout
+    this.stopNodeTimeoutCheck();
+
+    // Start a new timer
+    this.nodeTimeout = setTimeout(() => {
+      this.logger.debug(
+        'Node',
+        `Shutting down node ${this.getNodeId()} (${this.config.timeout}s timeout reached)`
+      );
+      this.nodeTimeout = null;
+      this.stop();
+    }, (this.config.timeout * 1000));
+  }
+
+  /**
+   * Stop the current node timeout check if
+   * there's one.
+   */
+  private stopNodeTimeoutCheck(): void {
+    // If there is a current node timeout, stop it
+    if (this.nodeTimeout) {
+      clearTimeout(this.nodeTimeout);
+      this.nodeTimeout = null;
+    }
+  }
 }
 
 export interface NodeConfiguration {
@@ -91,4 +128,5 @@ export interface NodeConfiguration {
   maxPort: number;
   players: Player[];
   ruleset: Ruleset;
+  timeout: number;
 }

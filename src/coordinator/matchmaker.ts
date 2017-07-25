@@ -12,6 +12,7 @@ import { StandardRuleset } from '../common/rules/presets/standard-ruleset';
  * rank, and then creates games accordingly.
  */
 export class Matchmaker {
+  private config: MatchmakerConfiguration;
   private playersQueue: Map<string, (g: Game) => void>;
 
   /**
@@ -19,11 +20,14 @@ export class Matchmaker {
    *
    * @param logger   An instance of the logger service
    * @param provider A node provider
+   * @param config   Matchmaker settings
    */
   public constructor(
     private logger: Logger,
-    private provider: NodeProvider<any, NodeConfiguration>
+    private provider: NodeProvider<any, NodeConfiguration>,
+    config: MatchmakerConfiguration,
   ) {
+    this.config = { ...config };
     this.playersQueue = new Map<string, (g: Game) => void>();
   }
 
@@ -149,29 +153,27 @@ export class Matchmaker {
 
     // Group players
     const groups: Player[][] = [];
-    let groupIndex = 0;
-    let playerIndex = 0;
+    let currentGroup: Player[]|null = null;
 
     for (const player of sortedRankedPlayers) {
-      if (0 === playerIndex) {
-        groups[groupIndex] = [];
+      if (
+        !currentGroup ||
+        Math.abs(currentGroup[0].rank - player.rank) > this.config.maxRankDifference
+      ) {
+        currentGroup = [];
       }
 
-      groups[groupIndex].push(player);
+      currentGroup.push(player);
 
-      playerIndex++;
-
-      if (playerIndex > 1) {
-        groupIndex++;
-        playerIndex = 0;
+      if (currentGroup.length > 1) {
+        groups.push(currentGroup);
       }
-    }
-
-    // Remove last group if there is only one player
-    if (groups.length && (groups[groups.length - 1].length === 1)) {
-      groups.slice((groups.length - 1), 1);
     }
 
     return groups;
   }
+}
+
+export interface MatchmakerConfiguration {
+  maxRankDifference: number;
 }
