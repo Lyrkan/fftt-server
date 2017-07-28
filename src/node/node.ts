@@ -105,7 +105,7 @@ export class Node {
       );
       this.nodeTimeout = null;
       this.stop();
-    }, (this.config.timeout * 1000));
+    }, this.config.timeout);
   }
 
   /**

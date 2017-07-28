@@ -5,6 +5,7 @@ import { LogLevel } from './common/services/logger/logger';
 import { Matchmaker } from './coordinator/matchmaker';
 import { PrettyLogger } from './common/services/logger/pretty-logger';
 import { Server } from './coordinator/server';
+import parseTimestring = require('timestring');
 
 // Load environment variables from .env file if available
 require('dotenv').config();
@@ -33,7 +34,7 @@ const nodeProvider = new LocalProvider(
     maxNodes: parseInt(process.env.PROVIDER_MAX_NODES || '10', 10),
     minPort: parseInt(process.env.PROVIDER_MIN_PORT || '9000', 10),
     maxPort: parseInt(process.env.PROVIDER_MAX_PORT || '9999', 10),
-    nodeTimeout: parseInt(process.env.PROVIDER_NODE_TIMEOUT || '600', 10),
+    nodeTimeout: parseTimestring(process.env.PROVIDER_NODE_TIMEOUT || '10mins', 'ms'),
     host: process.env.LOCAL_PROVIDER_HOST,
     jwtPublicCert: process.env.JWT_PUBLIC_CERT || 'certs/jwt.pub',
   }
@@ -63,8 +64,8 @@ const coordinator = new Coordinator(
   matchmaker,
   server,
   {
-    tickInterval: parseInt(process.env.COORDINATOR_TICK_INTERVAL || '5000', 10),
-    stopTimeout: parseInt(process.env.COORDINATOR_STOP_TIMEOUT || '30000', 10),
+    tickInterval: parseTimestring(process.env.COORDINATOR_TICK_INTERVAL || '5secs', 'ms'),
+    stopTimeout: parseTimestring(process.env.COORDINATOR_STOP_TIMEOUT || '30secs', 'ms'),
   },
 );
 
