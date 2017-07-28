@@ -36,6 +36,7 @@ export class Coordinator {
   ) {
     this.config = { ...config };
     this.games = [];
+    this.server.setCoordinator(this);
   }
 
   /**
@@ -95,6 +96,22 @@ export class Coordinator {
         }
       }, 100);
     });
+  }
+
+  /**
+   * Retrieve the game a player is currently
+   * into if there is one, null otherwise.
+   *
+   * @param player Id of the player
+   */
+  public getGame(playerId: string): Game|null {
+    for (const game of this.games) {
+      if (game.playerIds.indexOf(playerId) !== -1) {
+        return game;
+      }
+    }
+
+    return null;
   }
 
   private async runLoop(): Promise<void> {

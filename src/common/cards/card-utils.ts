@@ -19,17 +19,17 @@ export function cardGlobalValue(card: Card): number {
  * @param count Number of random cards to be picked
  */
 export function randomCards(count: number): string[] {
-  const availableCards = Array.from(Cards.values())
-    .map(c => ({id: c.id, value: cardGlobalValue(c)}));
-
   const cards: string[] = [];
 
-  // TODO Change probability based on card global value
+  if (Cards.length) {
+    const cardValues = Cards.map(
+      c => ({id: c.id, value: cardGlobalValue(c)})
+    );
 
-  if (availableCards.length) {
     for (let i = 0; i < count ; i++) {
-      const randomCard = Math.floor(Math.random() * availableCards.length);
-      cards.push(availableCards[randomCard].id);
+      // TODO Change probability based on card values
+      const randomCard = Math.floor(Math.random() * cardValues.length);
+      cards.push(cardValues[randomCard].id);
     }
   }
 

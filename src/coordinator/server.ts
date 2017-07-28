@@ -2,7 +2,8 @@ import * as fs from 'fs';
 import * as http from 'http';
 import * as socketio from 'socket.io';
 import * as socketioJwt from 'socketio-jwt';
-import { Cards } from '../common/cards/cards';
+import { CardsMap } from '../common/cards/cards';
+import { Coordinator } from './coordinator';
 import { Game } from '../common/model/game';
 import { Logger } from '../common/services/logger/logger';
 import { Matchmaker } from './matchmaker';
@@ -18,6 +19,7 @@ export class Server {
   private httpServer: http.Server;
   private ioServer: SocketIO.Server;
   private sockets: Map<string, SocketIO.Socket>;
+  private coordinator: Coordinator;
 
   /**
    * Constructor.
@@ -79,6 +81,19 @@ export class Server {
         resolve();
       }
     });
+  }
+
+  /**
+   * Set the coordinator currently associated to the
+   * server.
+   *
+   * The coordinator can't be injected in the
+   * constructor because of the circular reference.
+   *
+   * @param coordinator An instance of a Coordinator
+   */
+  public setCoordinator(coordinator: Coordinator) {
+    this.coordinator = coordinator;
   }
 
   /**
@@ -176,26 +191,17 @@ export class Server {
 
     // TODO Send player info
 
-    // TODO Check if player is already in a game
+    // Check if player is already in a game
+    if (this.coordinator) {
+      const currentGame = this.coordinator.getGame(player._id);
+      if (currentGame) {
+        this.sendNodeInfo(player, currentGame);
+      }
+    }
 
-    socket.on('disconnect', () => {
-      this.onPlayerDisconnected(player);
-    });
-
-    socket.on('startSearch', () => {
-      this.matchmaker.addPlayer(player._id, (game: Game) => {
-        this.logger.debug(
-          'Server',
-          `Found a game for player "${player._id}": "${game._id}" on node "${game.nodeId}"`
-        );
-
-        this.sendNodeInfo(player, game);
-      });
-    });
-
-    socket.on('stopSearch', () => {
-      this.matchmaker.removePlayer(player._id);
-    });
+    socket.on('disconnect',  () => this.onPlayerDisconnected(player));
+    socket.on('startSearch', () => this.onPlayerStartSearch(player));
+    socket.on('stopSearch',  () => this.onPlayerStopSearch(player));
   }
 
   /**
@@ -211,6 +217,33 @@ export class Server {
   }
 
   /**
+   * Called when a player starts searching for a game.
+   *
+   * @param player Player
+   */
+  private onPlayerStartSearch(player: Player): void {
+    this.logger.debug('Server', `Player "${player._id}" started searching for a game`);
+    this.matchmaker.addPlayer(player._id, (game: Game) => {
+      this.logger.debug(
+        'Server',
+        `Found a game for player "${player._id}": "${game._id}" on node "${game.nodeId}"`
+      );
+
+      this.sendNodeInfo(player, game);
+    });
+  }
+
+  /**
+   * Called when a player stops searching for a game.
+   *
+   * @param player Player
+   */
+  private onPlayerStopSearch(player: Player): void {
+    this.logger.debug('Server', `Player "${player._id}" stopped searching for a game`);
+    this.matchmaker.removePlayer(player._id);
+  }
+
+  /**
    * Retrieve information about the node a game is
    * running on and send them to a player.
    *
@@ -218,6 +251,11 @@ export class Server {
    * @param game   Active game
    */
   private async sendNodeInfo(player: Player, game: Game): Promise<void> {
+    this.logger.debug(
+      'Server',
+      `Sending node info to player "${player._id}" for game "${game._id}"`
+    );
+
     const socket = this.sockets.get(player._id);
     try {
       if (!socket) {
@@ -245,6 +283,8 @@ export class Server {
    * @param count  Number of cards to give to the player
    */
   private async dropCards(player: Player, count: number = 1): Promise<void> {
+    this.logger.debug('Server', `Dropping ${count} cards for player "${player._id}"`);
+
     const newCards = randomCards(count);
     try {
       player.cards = player.cards.concat(newCards);
@@ -252,7 +292,7 @@ export class Server {
 
       const socket = this.sockets.get(player._id);
       if (socket) {
-        socket.emit('newCards', newCards.map(cardId => Cards.get(cardId)));
+        socket.emit('newCards', newCards.map(cardId => CardsMap.get(cardId)));
       }
     } catch (e) {
       this.logger.error(

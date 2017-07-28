@@ -6,7 +6,7 @@ FFTT Server
 * Node 6.10+
 * Yarn
 * A MongoDB instance
-* A JWT provider and its public certificate
+* A JWT provider and its public certificate (each token should have at least a `sub` property)
 
 # Setup
 
