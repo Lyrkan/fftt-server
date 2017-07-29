@@ -1,9 +1,9 @@
-import { Game, GameModel } from '../common/model/game';
+import { Game, GameModel } from './model/game';
 import { GameStatus } from '../common/statuses/game-status';
 import { Logger } from '../common/services/logger/logger';
 import { NodesLimitReachedError } from './nodes/errors/nodes-limit-reached-error';
 import { NodeProvider, NodeConfiguration } from './nodes/node-provider';
-import { Player, PlayerModel } from '../common/model/player';
+import { Player, PlayerModel } from './model/player';
 import { StandardRuleset } from '../common/rules/presets/standard-ruleset';
 
 /**

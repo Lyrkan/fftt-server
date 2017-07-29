@@ -13,7 +13,7 @@ const PlayerSchema = new Schema({
 export interface Player extends Document {
   _id: string;
   username: string;
-  picture?: string | null;
+  picture?: string|null;
   rank: number;
   cards: string[];
 }

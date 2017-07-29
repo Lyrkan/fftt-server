@@ -1,5 +1,5 @@
 import { Document, model, Model, Schema } from 'mongoose';
-import { GameStatus } from '../statuses/game-status';
+import { GameStatus } from '../../common/statuses/game-status';
 
 const GameSchema = new Schema({
   nodeId: String,

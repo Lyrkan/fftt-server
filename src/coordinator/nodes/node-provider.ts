@@ -1,7 +1,7 @@
-import { GameStatus } from '../../common/statuses/game-status';
+import { GameInfo } from '../../common/dto/game-info';
 import { Logger } from '../../common/services/logger/logger';
-import { NodeInfo } from './node-info';
-import { Player } from '../../common/model/player';
+import { NodeInfo } from '../../common/dto/node-info';
+import { Player } from '../model/player';
 import { Ruleset } from '../../common/rules/ruleset';
 
 export abstract class NodeProvider<T, U extends NodeConfiguration> {
@@ -41,12 +41,12 @@ export abstract class NodeProvider<T, U extends NodeConfiguration> {
   public abstract async getNodeInfo(nodeId: string): Promise<NodeInfo>;
 
   /**
-   * Retrieve the status of the game running inside a given
+   * Retrieve info about the game running inside a given
    * node (in progress, ended, ...).
    *
    * @param nodeId A Node ID
    */
-  public abstract async getGameStatus(nodeId: string): Promise<GameStatus>;
+  public abstract async getGameInfo(nodeId: string): Promise<GameInfo>;
 }
 
 export interface NodeConfiguration {

@@ -4,11 +4,12 @@ import * as socketio from 'socket.io';
 import * as socketioJwt from 'socketio-jwt';
 import { CardsMap } from '../common/cards/cards';
 import { Coordinator } from './coordinator';
-import { Game } from '../common/model/game';
+import { Game } from './model/game';
 import { Logger } from '../common/services/logger/logger';
 import { Matchmaker } from './matchmaker';
 import { NodeProvider, NodeConfiguration } from './nodes/node-provider';
-import { Player, PlayerModel, DEFAULT_RANK } from '../common/model/player';
+import { Player, PlayerModel, DEFAULT_RANK } from './model/player';
+import { PlayerInfo } from '../common/dto/player-info';
 import { randomCards } from '../common/cards/card-utils';
 
 /**
@@ -139,7 +140,7 @@ export class Server {
           const newPlayer = new PlayerModel({
             _id: playerId,
             username: decodedToken.username || playerId,
-            picture: decodedToken.picture,
+            picture: decodedToken.picture || null,
             rank: DEFAULT_RANK,
             cards: [],
           });
@@ -189,7 +190,8 @@ export class Server {
       this.dropCards(player, 10);
     }
 
-    // TODO Send player info
+    // Send player info
+    this.sendPlayerOwnInfo(player);
 
     // Check if player is already in a game
     if (this.coordinator) {
@@ -244,6 +246,40 @@ export class Server {
   }
 
   /**
+   * Send a player its information.
+   *
+   * @param player Player
+   */
+  private sendPlayerOwnInfo(player: Player): void {
+    this.logger.debug(
+      'Server',
+      `Sending own info to player "${player._id}"`
+    );
+
+    try {
+      const socket = this.getPlayerSocket(player);
+      const playerInfo: PlayerInfo = {
+        playerId: player._id,
+        username: player.username,
+        picture: player.picture,
+        cards: player.cards,
+        rank: player.rank,
+      };
+
+      socket.emit(
+        'playerInfo',
+        playerInfo,
+      );
+    } catch (e) {
+      this.logger.debug(
+        'Server',
+        `Could not send own info to player "${player._id}": `,
+        e
+      );
+    }
+  }
+
+  /**
    * Retrieve information about the node a game is
    * running on and send them to a player.
    *
@@ -256,13 +292,9 @@ export class Server {
       `Sending node info to player "${player._id}" for game "${game._id}"`
     );
 
-    const socket = this.sockets.get(player._id);
     try {
-      if (!socket) {
-        throw new Error('Player is not associated to any active socket');
-      }
-
       // Retrieve node info from provider and send it to the player
+      const socket = this.getPlayerSocket(player);
       socket.emit(
         'nodeInfo',
         await this.nodeProvider.getNodeInfo(game.nodeId),
@@ -290,10 +322,8 @@ export class Server {
       player.cards = player.cards.concat(newCards);
       await player.save();
 
-      const socket = this.sockets.get(player._id);
-      if (socket) {
-        socket.emit('newCards', newCards.map(cardId => CardsMap.get(cardId)));
-      }
+      const socket = this.getPlayerSocket(player);
+      socket.emit('newCards', newCards.map(cardId => CardsMap.get(cardId)));
     } catch (e) {
       this.logger.error(
         'Server',
@@ -301,6 +331,21 @@ export class Server {
         e
       );
     }
+  }
+
+  /**
+   * Retrieve the current socket associated to a
+   * player or throw an error if there is none.
+   *
+   * @param player Player
+   */
+  private getPlayerSocket(player: Player) {
+    const socket = this.sockets.get(player._id);
+    if (!socket) {
+      throw new Error('Player is not associated to any active socket');
+    }
+
+    return socket;
   }
 }
 

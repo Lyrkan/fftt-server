@@ -1,7 +1,8 @@
+import { GameInfo } from '../common/dto/game-info';
 import { GameStatus } from '../common/statuses/game-status';
 import { Logger } from '../common/services/logger/logger';
 import { NodeStatus } from '../common/statuses/node-status';
-import { Player } from '../common/model/player';
+import { PlayerInfo } from '../common/dto/player-info';
 import { Ruleset } from '../common/rules/ruleset';
 
 export class Node {
@@ -73,11 +74,12 @@ export class Node {
   }
 
   /**
-   * Return the status of the game.
+   * Return some info about the game.
    */
-  public getGameStatus(): GameStatus {
-    // TODO
-    return GameStatus.UNKNOWN;
+  public getGameInfo(): GameInfo {
+    return {
+      status: GameStatus.UNKNOWN,
+    };
   }
 
   /**
@@ -126,7 +128,7 @@ export interface NodeConfiguration {
   jwtPublicCert: string;
   minPort: number;
   maxPort: number;
-  players: Player[];
+  players: PlayerInfo[];
   ruleset: Ruleset;
   timeout: number;
 }

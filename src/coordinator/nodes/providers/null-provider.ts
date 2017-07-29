@@ -1,11 +1,12 @@
 import * as uuid from 'uuid';
+import { GameInfo } from '../../../common/dto/game-info';
 import { GameStatus } from '../../../common/statuses/game-status';
 import { Logger } from '../../../common/services/logger/logger';
-import { NodeInfo } from '../node-info';
+import { NodeInfo } from '../../../common/dto/node-info';
 import { NodeProvider, NodeConfiguration } from '../node-provider';
 import { NodeNotFoundError } from '../errors/node-not-found-error';
 import { NodeStatus } from '../../../common/statuses/node-status';
-import { Player } from '../../../common/model/player';
+import { Player } from '../../model/player';
 import { Ruleset } from '../../../common/rules/ruleset';
 
 export class NullProvider extends NodeProvider<string, NodeConfiguration> {
@@ -46,11 +47,13 @@ export class NullProvider extends NodeProvider<string, NodeConfiguration> {
     };
   }
 
-  public async getGameStatus(nodeId: string): Promise<GameStatus> {
+  public async getGameInfo(nodeId: string): Promise<GameInfo> {
     if (!this.currentNodes.has(nodeId)) {
       throw new NodeNotFoundError(nodeId);
     }
 
-    return GameStatus.UNKNOWN;
+    return {
+      status: GameStatus.UNKNOWN
+    };
   }
 }

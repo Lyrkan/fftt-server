@@ -1,13 +1,14 @@
 import * as uuid from 'uuid';
 import * as os from 'os';
+import { GameInfo } from '../../../common/dto/game-info';
 import { GameStatus } from '../../../common/statuses/game-status';
-import { NodeInfo } from '../node-info';
+import { NodeInfo } from '../../../common/dto/node-info';
 import { NodeProvider, NodeConfiguration } from '../node-provider';
 import { Node } from '../../../node/node';
 import { NodeNotFoundError } from '../errors/node-not-found-error';
 import { NodesLimitReachedError } from '../errors/nodes-limit-reached-error';
 import { NodeStatus } from '../../../common/statuses/node-status';
-import { Player } from '../../../common/model/player';
+import { Player } from '../../model/player';
 import { Ruleset } from '../../../common/rules/ruleset';
 
 export class LocalProvider extends NodeProvider<Node, LocalNodeConfiguration> {
@@ -25,7 +26,13 @@ export class LocalProvider extends NodeProvider<Node, LocalNodeConfiguration> {
         minPort: this.config.minPort,
         maxPort: this.config.maxPort,
         timeout: this.config.nodeTimeout,
-        players,
+        players: players.map(player => ({
+          playerId: player._id,
+          username: player.username,
+          picture: player.picture,
+          cards: player.cards,
+          rank: player.rank,
+        })),
         ruleset,
       }
     );
@@ -74,13 +81,13 @@ export class LocalProvider extends NodeProvider<Node, LocalNodeConfiguration> {
     };
   }
 
-  public async getGameStatus(nodeId: string): Promise<GameStatus> {
+  public async getGameInfo(nodeId: string): Promise<GameInfo> {
     if (!this.currentNodes.has(nodeId)) {
       throw new NodeNotFoundError(nodeId);
     }
 
     const node = this.currentNodes.get(nodeId);
-    return node ? node.getGameStatus() : GameStatus.UNKNOWN;
+    return node ? node.getGameInfo() : { status: GameStatus.UNKNOWN };
   }
 
   private getLocalIpAddress(): string|null {

@@ -1,4 +1,4 @@
-import { Game } from '../common/model/game';
+import { Game } from './model/game';
 import { GameStatus } from '../common/statuses/game-status';
 import { Logger } from '../common/services/logger/logger';
 import { Matchmaker } from './matchmaker';
@@ -174,11 +174,14 @@ export class Coordinator {
         );
         game.status = GameStatus.ENDED;
       } else if (NodeStatus.RUNNING === nodeStatus) {
-        // Update game status
+        // Retrieve info about the game and update its status;
+        let gameInfo = null;
         game.status = GameStatus.UNKNOWN;
 
         try {
-          game.status = await this.provider.getGameStatus(game.nodeId);
+          gameInfo = await this.provider.getGameInfo(game.nodeId);
+          game.status = gameInfo.status;
+          // TODO Get game results from gameInfo if available
         } catch (e) {
           this.logger.warn(
             'Coordinator',
@@ -192,8 +195,6 @@ export class Coordinator {
             'Coordinator',
             `Game "${game.id}" ended, shutting down node "${game.nodeId}"`
           );
-
-          // TODO Get game results and persist them
 
           await this.provider.stopNode(game.nodeId);
         }
