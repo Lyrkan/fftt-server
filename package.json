@@ -6,7 +6,9 @@
     "build": "tsc",
     "lint": "tslint './src/**/*.ts'",
     "start": "tsc && node dist/index.js",
-    "test": "mocha -r ts-node/register \"./test/**/*.spec.ts\""
+    "test": "mocha -r ts-node/register \"./test/**/*.spec.ts\"",
+    "precommit": "yarn run lint",
+    "prepush": "yarn run lint && yarn run test"
   },
   "engines": {
     "node": ">=6.10"
@@ -41,6 +43,7 @@
     "@types/chai": "^4.0.1",
     "@types/mocha": "^2.2.41",
     "chai": "^4.1.0",
+    "husky": "^0.14.3",
     "mocha": "^3.4.2",
     "ts-node": "^3.2.0",
     "tslint": "^5.5.0"
