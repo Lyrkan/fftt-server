@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as http from 'http';
 import * as socketio from 'socket.io';
 import * as socketioJwt from 'socketio-jwt';
-import { CardsMap } from '../common/cards/cards';
+import { Cards, CardsMap } from '../common/cards/cards';
 import { Coordinator } from './coordinator';
 import { Game } from './model/game';
 import { Logger } from '../common/services/logger/logger';
@@ -187,6 +187,7 @@ export class Server {
 
     // Check if the player has cards, or drop some of them
     if (!player.cards.length) {
+      this.logger.debug('Server', `Player "${player._id}" has no card yet`);
       this.dropCards(player, 10);
     }
 
@@ -197,6 +198,7 @@ export class Server {
     if (this.coordinator) {
       const currentGame = this.coordinator.getGame(player._id);
       if (currentGame) {
+        this.logger.debug('Server', `Player "${player._id}" is already in a game`);
         this.sendNodeInfo(player, currentGame);
       }
     }
@@ -224,6 +226,16 @@ export class Server {
    * @param player Player
    */
   private onPlayerStartSearch(player: Player): void {
+    const currentGame = this.coordinator.getGame(player._id);
+    if (currentGame) {
+      this.logger.debug(
+        'Server',
+        `Player "${player._id}" tried to search for a game but is already in one`
+      );
+      this.sendNodeInfo(player, currentGame);
+      return;
+    }
+
     this.logger.debug('Server', `Player "${player._id}" started searching for a game`);
     this.matchmaker.addPlayer(player._id, (game: Game) => {
       this.logger.debug(
@@ -317,7 +329,7 @@ export class Server {
   private async dropCards(player: Player, count: number = 1): Promise<void> {
     this.logger.debug('Server', `Dropping ${count} cards for player "${player._id}"`);
 
-    const newCards = randomCards(count);
+    const newCards = randomCards(Cards, count);
     try {
       player.cards = player.cards.concat(newCards);
       await player.save();

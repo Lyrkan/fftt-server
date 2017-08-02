@@ -6,7 +6,7 @@
     "build": "tsc",
     "lint": "tslint './src/**/*.ts'",
     "start": "tsc && node dist/index.js",
-    "test": "mocha -r ts-node/register test/**/*.spec.ts"
+    "test": "mocha -r ts-node/register \"./test/**/*.spec.ts\""
   },
   "engines": {
     "node": ">=6.10"
