@@ -5,7 +5,7 @@ import * as socketioJwt from 'socketio-jwt';
 import { Cards, CardsMap } from '../common/cards/cards';
 import { Coordinator } from './coordinator';
 import { Game } from './model/game';
-import { Logger } from '../common/services/logger/logger';
+import { Logger } from '../common/logger/logger';
 import { Matchmaker } from './matchmaker';
 import { NodeProvider, NodeConfiguration } from './nodes/node-provider';
 import { Player, PlayerModel, DEFAULT_RANK } from './model/player';

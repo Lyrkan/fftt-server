@@ -1,7 +1,7 @@
 import * as uuid from 'uuid';
 import { GameInfo } from '../../../common/dto/game-info';
 import { GameStatus } from '../../../common/statuses/game-status';
-import { Logger } from '../../../common/services/logger/logger';
+import { Logger } from '../../../common/logger/logger';
 import { NodeInfo } from '../../../common/dto/node-info';
 import { NodeProvider, NodeConfiguration } from '../node-provider';
 import { NodeNotFoundError } from '../errors/node-not-found-error';

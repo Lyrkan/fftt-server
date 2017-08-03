@@ -1,9 +1,9 @@
 import * as mongoose from 'mongoose';
 import { Coordinator } from './coordinator/coordinator';
 import { LocalProvider } from './coordinator/nodes/providers/local-provider';
-import { LogLevel } from './common/services/logger/logger';
+import { LogLevel } from './common/logger/logger';
 import { Matchmaker } from './coordinator/matchmaker';
-import { PrettyLogger } from './common/services/logger/pretty-logger';
+import { PrettyLogger } from './common/logger/pretty-logger';
 import { Server } from './coordinator/server';
 import parseTimestring = require('timestring');
 
@@ -32,8 +32,8 @@ const nodeProvider = new LocalProvider(
   logger,
   {
     maxNodes: parseInt(process.env.PROVIDER_MAX_NODES || '10', 10),
-    minPort: parseInt(process.env.PROVIDER_MIN_PORT || '9000', 10),
-    maxPort: parseInt(process.env.PROVIDER_MAX_PORT || '9999', 10),
+    minPort: parseInt(process.env.PROVIDER_MIN_PORT || '0', 10),
+    maxPort: parseInt(process.env.PROVIDER_MAX_PORT || '0', 10),
     nodeTimeout: parseTimestring(process.env.PROVIDER_NODE_TIMEOUT || '10mins', 'ms'),
     host: process.env.LOCAL_PROVIDER_HOST,
     jwtPublicCert: process.env.JWT_PUBLIC_CERT || 'certs/jwt.pub',

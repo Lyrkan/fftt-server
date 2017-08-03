@@ -1,6 +1,6 @@
 import { Game } from './model/game';
 import { GameStatus } from '../common/statuses/game-status';
-import { Logger } from '../common/services/logger/logger';
+import { Logger } from '../common/logger/logger';
 import { Matchmaker } from './matchmaker';
 import { NodeNotFoundError } from './nodes/errors/node-not-found-error';
 import { NodeProvider, NodeConfiguration } from './nodes/node-provider';

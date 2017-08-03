@@ -1,6 +1,6 @@
 import { GameInfo } from '../common/dto/game-info';
 import { GameStatus } from '../common/statuses/game-status';
-import { Logger } from '../common/services/logger/logger';
+import { Logger } from '../common/logger/logger';
 import { NodeStatus } from '../common/statuses/node-status';
 import { PlayerInfo } from '../common/dto/player-info';
 import { Ruleset } from '../common/rules/ruleset';

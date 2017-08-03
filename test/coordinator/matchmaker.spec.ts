@@ -1,7 +1,7 @@
 import 'mocha';
 import { expect } from 'chai';
 import { Matchmaker } from '../../src/coordinator/matchmaker';
-import { NullLogger } from '../../src/common/services/logger/null-logger';
+import { NullLogger } from '../../src/common/logger/null-logger';
 import { NullProvider } from '../../src/coordinator/nodes/providers/null-provider';
 
 describe('Matchmaker', () => {

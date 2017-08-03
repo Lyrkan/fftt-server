@@ -65,8 +65,8 @@ Durations are parsed using [timestring](https://github.com/mike182uk/timestring)
 | MATCHMAKER_MAX_RANK_DIFFERENCE | number   | Maximum rank difference between two players in matchmaking                 | 500                       |
 | MONGODB_URI                    | string   | URI of the MongoDB instance                                                | mongodb://localhost/fftt  |
 | PROVIDER_MAX_NODES             | number   | Maximum concurrent nodes allowed                                           | 10                        |
-| PROVIDER_MAX_PORT              | number   | Maximum port the nodes can run on                                          | 9999                      |
-| PROVIDER_MIN_PORT              | number   | Minimum port the nodes can run on                                          | 9000                      |
+| PROVIDER_MAX_PORT              | number   | Maximum port the nodes can run on. If falsy a random port will be used.    |                           |
+| PROVIDER_MIN_PORT              | number   | Minimum port the nodes can run on. If falsy a random port will be used.    |                           |
 | PROVIDER_NODE_TIMEOUT          | duration | How much time nodes are allowed to run                                     | 10mins                    |
 
 # Provider-specific environment variables

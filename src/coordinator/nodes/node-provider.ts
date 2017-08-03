@@ -1,5 +1,5 @@
 import { GameInfo } from '../../common/dto/game-info';
-import { Logger } from '../../common/services/logger/logger';
+import { Logger } from '../../common/logger/logger';
 import { NodeInfo } from '../../common/dto/node-info';
 import { Player } from '../model/player';
 import { Ruleset } from '../../common/rules/ruleset';

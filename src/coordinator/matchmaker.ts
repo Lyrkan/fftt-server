@@ -1,6 +1,6 @@
 import { Game, GameModel } from './model/game';
 import { GameStatus } from '../common/statuses/game-status';
-import { Logger } from '../common/services/logger/logger';
+import { Logger } from '../common/logger/logger';
 import { NodesLimitReachedError } from './nodes/errors/nodes-limit-reached-error';
 import { NodeProvider, NodeConfiguration } from './nodes/node-provider';
 import { Player, PlayerModel } from './model/player';
