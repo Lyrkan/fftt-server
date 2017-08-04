@@ -1,14 +1,18 @@
 import { GameInfo } from '../common/dto/game-info';
 import { GameStatus } from '../common/statuses/game-status';
-import { Logger } from '../common/logger/logger';
+import { LoggerDecorator } from './logger/logger-decorator';
+import { LoggerInterface } from '../common/logger/logger';
 import { NodeStatus } from '../common/statuses/node-status';
 import { PlayerInfo } from '../common/dto/player-info';
 import { Ruleset } from '../common/rules/ruleset';
+import { Server } from './server';
 
 export class Node {
+  private logger: LoggerInterface;
   private config: NodeConfiguration;
+  private server: Server;
   private status: NodeStatus;
-  private nodeTimeout?: NodeJS.Timer|null;
+  private nodeTimeout: NodeJS.Timer|null;
 
   /**
    * Constructor.
@@ -16,9 +20,18 @@ export class Node {
    * @param logger An instance of the logger service
    * @param config Node settings
    */
-  public constructor(private logger: Logger, config: NodeConfiguration) {
+  public constructor(logger: LoggerInterface, config: NodeConfiguration) {
+    this.logger = new LoggerDecorator(logger, config.nodeId);
     this.config = { ...config };
     this.status = NodeStatus.STOPPED;
+
+    // TODO Instanciate the server elsewhere
+    this.server = new Server(this.logger, {
+      jwtPublicCert: this.config.jwtPublicCert,
+      jwtAlgorithms: this.config.jwtAlgorithms,
+      minPort: this.config.minPort,
+      maxPort: this.config.maxPort,
+    });
   }
 
   /**
@@ -26,18 +39,22 @@ export class Node {
    */
   public async start(): Promise<void> {
     if (this.status !== NodeStatus.STOPPED) {
-      this.logger.debug('Node', `Node "${this.getNodeId()}" is already running`);
+      this.logger.debug('Node', 'Node is already running');
       return;
     }
 
-    this.logger.info('Node', `Starting node "${this.getNodeId()}"`);
+    this.logger.info('Node', 'Starting node');
     this.status = NodeStatus.STARTING;
 
-    // TODO
-
-    this.logger.info('Node', `Node "${this.getNodeId()}" is now running`);
-    this.status = NodeStatus.RUNNING;
-    this.startNodeTimeoutCheck();
+    try {
+      await this.server.start();
+      this.logger.info('Node', 'Node is now running');
+      this.status = NodeStatus.RUNNING;
+      this.startNodeTimeoutCheck();
+    } catch (e) {
+      this.logger.error('Node', 'Could not start server: ', e);
+      this.status = NodeStatus.UNKNOWN;
+    }
   }
 
   /**
@@ -45,18 +62,22 @@ export class Node {
    */
   public async stop(): Promise<void> {
     if (this.status !== NodeStatus.RUNNING) {
-      this.logger.debug('Node', `Node "${this.getNodeId()}" is not running`);
+      this.logger.debug('Node', `Node is not running`);
       return;
     }
 
-    this.logger.info('Node', `Stopping node "${this.getNodeId()}"`);
+    this.logger.info('Node', `Stopping node`);
     this.stopNodeTimeoutCheck();
     this.status = NodeStatus.STOPPING;
 
-    // TODO
-
-    this.logger.info('Node', `Node "${this.getNodeId()}" is now stopped`);
-    this.status = NodeStatus.STOPPED;
+    try {
+      await this.server.stop();
+      this.logger.info('Node', `Node is now stopped`);
+      this.status = NodeStatus.STOPPED;
+    } catch (e) {
+      this.logger.error('Node', 'Could not stop server: ', e);
+      this.status = NodeStatus.UNKNOWN;
+    }
   }
 
   /**
@@ -83,11 +104,11 @@ export class Node {
   }
 
   /**
-   * Return the port the node is listening to.
+   * Return the port the node is listening to or
+   * null if there isn't one.
    */
   public getPort(): number|null {
-    // TODO
-    return null;
+    return this.server.getPort();
   }
 
   /**
@@ -103,7 +124,7 @@ export class Node {
     this.nodeTimeout = setTimeout(() => {
       this.logger.debug(
         'Node',
-        `Shutting down node ${this.getNodeId()} (${this.config.timeout}s timeout reached)`
+        `Shutting down node (${this.config.timeout}s timeout reached)`
       );
       this.nodeTimeout = null;
       this.stop();
@@ -126,6 +147,7 @@ export class Node {
 export interface NodeConfiguration {
   readonly nodeId: string;
   jwtPublicCert: string;
+  jwtAlgorithms: string[];
   minPort: number;
   maxPort: number;
   players: PlayerInfo[];

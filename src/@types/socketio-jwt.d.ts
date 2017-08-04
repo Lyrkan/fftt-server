@@ -5,6 +5,7 @@ declare namespace SocketIOJwt {
     secret?: Buffer;
     handshake?: boolean;
     callback?: boolean | number;
+    algorithms?: string[];
   }
 
   export type AuthorizeCallback = ((socket: SocketIO.Socket) => void);

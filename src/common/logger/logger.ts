@@ -6,7 +6,7 @@ export enum LogLevel {
   ERROR = 4,
 }
 
-export abstract class Logger {
+export abstract class Logger implements LoggerInterface {
   /**
    * Constructor.
    *
@@ -16,11 +16,7 @@ export abstract class Logger {
   }
 
   /**
-   * Log a "trace" message if the current log level allows it.
-   *
-   * @param category Message category
-   * @param message  Message
-   * @param args     Additional data related to the message
+   * @inheritdoc
    */
   public trace(category: string, message: string, ...args: any[]): void {
     if (this.level > LogLevel.TRACE) {
@@ -31,11 +27,7 @@ export abstract class Logger {
   }
 
   /**
-   * Log a "debug" message if the current log level allows it.
-   *
-   * @param category Message category
-   * @param message  Message
-   * @param args     Additional data related to the message
+   * @inheritdoc
    */
   public debug(category: string, message: string, ...args: any[]): void {
     if (this.level > LogLevel.DEBUG) {
@@ -46,11 +38,7 @@ export abstract class Logger {
   }
 
   /**
-   * Log an "info" message if the current log level allows it.
-   *
-   * @param category Message category
-   * @param message  Message
-   * @param args     Additional data related to the message
+   * @inheritdoc
    */
   public info(category: string, message: string, ...args: any[]): void {
     if (this.level > LogLevel.INFO) {
@@ -61,11 +49,7 @@ export abstract class Logger {
   }
 
   /**
-   * Log a "warn" message if the current log level allows it.
-   *
-   * @param category Message category
-   * @param message  Message
-   * @param args     Additional data related to the message
+   * @inheritdoc
    */
   public warn(category: string, message: string, ...args: any[]): void {
     if (this.level > LogLevel.WARN) {
@@ -76,11 +60,7 @@ export abstract class Logger {
   }
 
   /**
-   * Log an "error" message if the current log level allows it.
-   *
-   * @param category Message category
-   * @param message  Message
-   * @param args     Additional data related to the message
+   * @inheritdoc
    */
   public error(category: string, message: string, ...args: any[]): void {
     if (this.level > LogLevel.ERROR) {
@@ -91,16 +71,14 @@ export abstract class Logger {
   }
 
   /**
-   * Return the current log level.
+   * @inheritdoc
    */
   public getLevel(): LogLevel {
     return this.level;
   }
 
   /**
-   * Set a new log level.
-   *
-   * @param level New log level
+   * @inheritdoc
    */
   public setLevel(level: LogLevel): this {
     this.level = level;
@@ -112,4 +90,63 @@ export abstract class Logger {
   protected abstract logInfo(category: string, message: string, ...args: any[]): void;
   protected abstract logWarn(category: string, message: string, ...args: any[]): void;
   protected abstract logError(category: string, message: string, ...args: any[]): void;
+}
+
+export interface LoggerInterface {
+  /**
+   * Log a "trace" message if the current log level allows it.
+   *
+   * @param category Message category
+   * @param message  Message
+   * @param args     Additional data related to the message
+   */
+  trace(category: string, message: string, ...args: any[]): void;
+
+  /**
+   * Log a "debug" message if the current log level allows it.
+   *
+   * @param category Message category
+   * @param message  Message
+   * @param args     Additional data related to the message
+   */
+  debug(category: string, message: string, ...args: any[]): void;
+
+  /**
+   * Log an "info" message if the current log level allows it.
+   *
+   * @param category Message category
+   * @param message  Message
+   * @param args     Additional data related to the message
+   */
+  info(category: string, message: string, ...args: any[]): void;
+
+  /**
+   * Log a "warn" message if the current log level allows it.
+   *
+   * @param category Message category
+   * @param message  Message
+   * @param args     Additional data related to the message
+   */
+  warn(category: string, message: string, ...args: any[]): void;
+
+  /**
+   * Log an "error" message if the current log level allows it.
+   *
+   * @param category Message category
+   * @param message  Message
+   * @param args     Additional data related to the message
+   */
+  error(category: string, message: string, ...args: any[]): void;
+
+  /**
+   * Return the current log level.
+   */
+  getLevel(): LogLevel;
+
+  /**
+   * Set a new log level.
+   *
+   * @param level New log level
+   */
+  setLevel(level: LogLevel): this;
 }

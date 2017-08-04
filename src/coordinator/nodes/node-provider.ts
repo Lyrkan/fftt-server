@@ -1,5 +1,5 @@
 import { GameInfo } from '../../common/dto/game-info';
-import { Logger } from '../../common/logger/logger';
+import { LoggerInterface } from '../../common/logger/logger';
 import { NodeInfo } from '../../common/dto/node-info';
 import { Player } from '../model/player';
 import { Ruleset } from '../../common/rules/ruleset';
@@ -13,7 +13,7 @@ export abstract class NodeProvider<T, U extends NodeConfiguration> {
    * @param logger An instance of the logger service
    * @param config Settings for this node provider
    */
-  public constructor(protected logger: Logger, protected config: U) {
+  public constructor(protected logger: LoggerInterface, protected config: U) {
     this.currentNodes = new Map<string, T>();
   }
 
@@ -54,5 +54,6 @@ export interface NodeConfiguration {
   minPort: number;
   maxPort: number;
   jwtPublicCert: string;
+  jwtAlgorithms: string[];
   nodeTimeout: number;
 }

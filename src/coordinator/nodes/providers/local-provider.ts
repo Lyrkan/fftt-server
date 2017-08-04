@@ -23,6 +23,7 @@ export class LocalProvider extends NodeProvider<Node, LocalNodeConfiguration> {
       {
         nodeId,
         jwtPublicCert: this.config.jwtPublicCert,
+        jwtAlgorithms: this.config.jwtAlgorithms,
         minPort: this.config.minPort,
         maxPort: this.config.maxPort,
         timeout: this.config.nodeTimeout,

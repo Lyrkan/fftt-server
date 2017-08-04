@@ -1,6 +1,6 @@
 import { Game } from './model/game';
 import { GameStatus } from '../common/statuses/game-status';
-import { Logger } from '../common/logger/logger';
+import { LoggerInterface } from '../common/logger/logger';
 import { Matchmaker } from './matchmaker';
 import { NodeNotFoundError } from './nodes/errors/node-not-found-error';
 import { NodeProvider, NodeConfiguration } from './nodes/node-provider';
@@ -28,7 +28,7 @@ export class Coordinator {
    * @param config     Coordinator settings
    */
   public constructor(
-    private logger: Logger,
+    private logger: LoggerInterface,
     private provider: NodeProvider<any, NodeConfiguration>,
     private matchmaker: Matchmaker,
     private server: Server,
@@ -175,11 +175,10 @@ export class Coordinator {
         game.status = GameStatus.ENDED;
       } else if (NodeStatus.RUNNING === nodeStatus) {
         // Retrieve info about the game and update its status;
-        let gameInfo = null;
         game.status = GameStatus.UNKNOWN;
 
         try {
-          gameInfo = await this.provider.getGameInfo(game.nodeId);
+          const gameInfo = await this.provider.getGameInfo(game.nodeId);
           game.status = gameInfo.status;
           // TODO Get game results from gameInfo if available
         } catch (e) {

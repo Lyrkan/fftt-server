@@ -2,10 +2,10 @@ import * as fs from 'fs';
 import * as http from 'http';
 import * as socketio from 'socket.io';
 import * as socketioJwt from 'socketio-jwt';
-import { Cards, CardsMap } from '../common/cards/cards';
+import { CardsManager } from '../common/cards/cards-manager';
 import { Coordinator } from './coordinator';
 import { Game } from './model/game';
-import { Logger } from '../common/logger/logger';
+import { LoggerInterface } from '../common/logger/logger';
 import { Matchmaker } from './matchmaker';
 import { NodeProvider, NodeConfiguration } from './nodes/node-provider';
 import { Player, PlayerModel, DEFAULT_RANK } from './model/player';
@@ -25,13 +25,17 @@ export class Server {
   /**
    * Constructor.
    *
-   * @param logger An instance of the logger service
-   * @param config Coordinator settings
+   * @param logger       An instance of the logger service
+   * @param matchmaker   An instance of the matchmaker service
+   * @param nodeProvider An instance of a node provider
+   * @param cardsManager An instance of a cards manager
+   * @param config       Server settings
    */
   public constructor(
-    private logger: Logger,
+    private logger: LoggerInterface,
     private matchmaker: Matchmaker,
     private nodeProvider: NodeProvider<any, NodeConfiguration>,
+    private cardsManager: CardsManager,
     config: ServerConfiguration,
   ) {
     this.config = { ...config };
@@ -43,7 +47,7 @@ export class Server {
   /**
    * Start the server.
    */
-  public async start() {
+  public async start(): Promise<void> {
     this.logger.info('Server', `Starting coordinator server on port "${this.config.port}"`);
 
     if (this.httpServer.listening) {
@@ -65,7 +69,7 @@ export class Server {
   /**
    * Stop the server.
    */
-  public async stop() {
+  public async stop(): Promise<void> {
     await new Promise((resolve, reject) => {
       if (this.httpServer && this.httpServer.listening) {
         this.logger.info('Server', 'Stopping coordinator server');
@@ -93,20 +97,22 @@ export class Server {
    *
    * @param coordinator An instance of a Coordinator
    */
-  public setCoordinator(coordinator: Coordinator) {
+  public setCoordinator(coordinator: Coordinator): this {
     this.coordinator = coordinator;
+    return this;
   }
 
   /**
    * Initialize the Socket.IO server so it handles
    * JWT authentication.
    */
-  private initialize() {
+  private initialize(): void {
     try {
       const jwtPublicCert = fs.readFileSync(this.config.jwtPublicCert);
       this.ioServer.sockets.on('connection', socketioJwt.authorize({
         secret: jwtPublicCert,
         callback: 10000,
+        algorithms: this.config.jwtAlgorithms,
       })).on('authenticated', (socket: { decoded_token: DecodedToken } & SocketIO.Socket) => {
         this.onPlayerAuthenticated(socket, socket.decoded_token);
       });
@@ -329,13 +335,15 @@ export class Server {
   private async dropCards(player: Player, count: number = 1): Promise<void> {
     this.logger.debug('Server', `Dropping ${count} cards for player "${player._id}"`);
 
-    const newCards = randomCards(Cards, count);
+    const cardsMap = this.cardsManager.getCardsMap();
+    const newCards = randomCards([...cardsMap.values()], count);
+
     try {
       player.cards = player.cards.concat(newCards);
       await player.save();
 
       const socket = this.getPlayerSocket(player);
-      socket.emit('newCards', newCards.map(cardId => CardsMap.get(cardId)));
+      socket.emit('newCards', newCards.map(cardId => cardsMap.get(cardId)));
     } catch (e) {
       this.logger.error(
         'Server',
@@ -364,6 +372,7 @@ export class Server {
 export interface ServerConfiguration {
   port: number;
   jwtPublicCert: string;
+  jwtAlgorithms: string[];
 }
 
 interface DecodedToken {

@@ -1,4 +1,6 @@
 import * as mongoose from 'mongoose';
+import * as path from 'path';
+import { CardsManager } from './common/cards/cards-manager';
 import { Coordinator } from './coordinator/coordinator';
 import { LocalProvider } from './coordinator/nodes/providers/local-provider';
 import { LogLevel } from './common/logger/logger';
@@ -25,8 +27,10 @@ mongoose.connection.on('error', () => {
   process.exit(255);
 });
 
-// Init node provider, matchmaker, server and coordinator
+// Init node provider, matchmaker, server, coordinator, ...
 logger.info('Main', 'Initializing...');
+
+const cardsManager = new CardsManager(logger);
 
 const nodeProvider = new LocalProvider(
   logger,
@@ -37,6 +41,7 @@ const nodeProvider = new LocalProvider(
     nodeTimeout: parseTimestring(process.env.PROVIDER_NODE_TIMEOUT || '10mins', 'ms'),
     host: process.env.LOCAL_PROVIDER_HOST,
     jwtPublicCert: process.env.JWT_PUBLIC_CERT || 'certs/jwt.pub',
+    jwtAlgorithms: (process.env.JWT_ALGORITHMS || 'RS256').split(','),
   }
 );
 
@@ -52,9 +57,11 @@ const server = new Server(
   logger,
   matchmaker,
   nodeProvider,
+  cardsManager,
   {
     port: parseInt(process.env.COORDINATOR_PORT || '8080', 10),
     jwtPublicCert: process.env.JWT_PUBLIC_CERT || 'certs/jwt.pub',
+    jwtAlgorithms: (process.env.JWT_ALGORITHMS || 'RS256').split(','),
   }
 );
 
@@ -69,12 +76,17 @@ const coordinator = new Coordinator(
   },
 );
 
-// Start coordinator
-coordinator.start().then(() => {
-  logger.info('Main', 'Coordinator is now running');
-}).catch(e => {
-  logger.error('Main', `Could not start server: `, e);
-  process.exit(255);
+// Load data and boot coordinator
+new Promise(async () => {
+  try {
+    await cardsManager.load(path.join(process.env.DATA_DIR || 'data', 'cards.json'));
+    await coordinator.start();
+  } catch (e) {
+    logger.error('Main', 'Could not start server: ', e);
+    process.exit(255);
+  }
+}).then(() => {
+  logger.info('Main', 'Server is now running');
 });
 
 function onStopSignal(signal: string) {

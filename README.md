@@ -60,7 +60,9 @@ Durations are parsed using [timestring](https://github.com/mike182uk/timestring)
 | COORDINATOR_PORT               | number   | Port the coordinator will be listening to                                  | 8080                      |
 | COORDINATOR_STOP_TIMEOUT       | duration | Delay allowed before a timeout exception is thrown on coordinator shutdown | 30secs                    |
 | COORDINATOR_TICK_INTERVAL      | duration | Interval between coordinator ticks                                         | 5secs                     |
+| DATA_DIR                       | string   | Path to the directory containing data files (e.g. cards.json)              | data                      |
 | JWT_PUBLIC_CERT                | string   | Path to the JWT public certificate                                         | certs/jwt.pub             |
+| JWT_ALGORITHMS                 | string   | Supported JWT algorithms, separated by commas (",")                        | RS256                     |
 | LOG_LEVEL                      | number   | Logging level: 0 (Trace), 1 (Debug), 2 (Info), 3 (Warning) or 4 (Error)    | 2                         |
 | MATCHMAKER_MAX_RANK_DIFFERENCE | number   | Maximum rank difference between two players in matchmaking                 | 500                       |
 | MONGODB_URI                    | string   | URI of the MongoDB instance                                                | mongodb://localhost/fftt  |
