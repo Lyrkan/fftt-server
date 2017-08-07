@@ -55,12 +55,16 @@ export class Server {
     }
 
     await new Promise((resolve, reject) => {
-      const rejectListener = (e: Error) => { reject(e); };
+      const rejectListener = (e: Error) => {
+        this.httpServer.removeListener('error', rejectListener);
+        reject(e);
+      };
+
       this.httpServer
         .on('error', rejectListener)
         .listen(this.config.port, () => {
           this.logger.info('Server', `Server is now listening to port ${this.config.port}`);
-          this.httpServer.removeListener('on', rejectListener);
+          this.httpServer.removeListener('error', rejectListener);
           resolve();
         });
     });
@@ -73,7 +77,12 @@ export class Server {
     await new Promise((resolve, reject) => {
       if (this.httpServer && this.httpServer.listening) {
         this.logger.info('Server', 'Stopping coordinator server');
-        const rejectListener = (e: Error) => { reject(e); };
+
+        const rejectListener = (e: Error) => {
+          this.httpServer.removeListener('error', rejectListener);
+          reject(e);
+        };
+
         this.httpServer
           .on('error', rejectListener)
           .close(() => {

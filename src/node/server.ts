@@ -38,7 +38,52 @@ export class Server {
       throw new Error(`Server is already running on port ${this.getPort()}`);
     }
 
-    // TODO Start the server
+    let minPort = 0;
+    let maxPort = 0;
+
+    if (this.config.minPort && this.config.maxPort) {
+      minPort = this.config.minPort;
+      maxPort = this.config.maxPort;
+    }
+
+    let started: boolean = false;
+    for (let port = minPort; (port <= maxPort) && !started; port++) {
+      try {
+        await new Promise((resolve, reject) => {
+          const rejectListener = (e: Error) => {
+            this.httpServer.removeListener('error', rejectListener);
+            reject(e);
+          };
+
+          this.httpServer
+            .on('error', rejectListener)
+            .listen(port, () => {
+              this.logger.info('Server', `Server is now listening to port ${port}`);
+              this.httpServer.removeListener('error', rejectListener);
+              resolve();
+            });
+        });
+
+        started = true;
+      } catch (e) {
+        if (e.code === 'EADDRINUSE') {
+          this.logger.debug('Server', `Port ${port} is already in use, skipping it`);
+        } else {
+          this.logger.error('Server', 'Could not start server: ', e);
+          throw e;
+        }
+      }
+    }
+
+    if (!started) {
+      if (!minPort && !maxPort) {
+        throw new Error(`Could not find a free port`);
+      } else {
+        throw new Error(
+          `Could not find a free port in the ${this.config.minPort}-${this.config.maxPort} range`
+        );
+      }
+    }
   }
 
   /**
@@ -48,7 +93,12 @@ export class Server {
     await new Promise((resolve, reject) => {
       if (this.httpServer && this.httpServer.listening) {
         this.logger.info('Server', 'Stopping node server');
-        const rejectListener = (e: Error) => { reject(e); };
+
+        const rejectListener = (e: Error) => {
+          this.httpServer.removeListener('error', rejectListener);
+          reject(e);
+        };
+
         this.httpServer
           .on('error', rejectListener)
           .close(() => {
@@ -79,7 +129,7 @@ export class Server {
    * Initialize the Socket.IO server so it handles
    * JWT authentication.
    */
-  private initialize() {
+  private initialize(): void {
     try {
       const jwtPublicCert = fs.readFileSync(this.config.jwtPublicCert);
       this.ioServer.sockets.on('connection', socketioJwt.authorize({
