@@ -72,7 +72,7 @@ export class Matchmaker {
         const newGame = new GameModel({
           nodeId: await this.provider.createNode(group, StandardRuleset),
           players: group.map(player => player._id),
-          status: GameStatus.IN_PROGRESS,
+          status: GameStatus.UNKNOWN,
         });
         await newGame.save();
 

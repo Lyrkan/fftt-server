@@ -20,7 +20,7 @@ export class Server {
   private httpServer: http.Server;
   private ioServer: SocketIO.Server;
   private sockets: Map<string, SocketIO.Socket>;
-  private coordinator: Coordinator;
+  private coordinator?: Coordinator;
 
   /**
    * Constructor.
@@ -216,6 +216,11 @@ export class Server {
         this.logger.debug('Server', `Player "${player._id}" is already in a game`);
         this.sendNodeInfo(player, currentGame);
       }
+    } else {
+      this.logger.error(
+        'Server',
+        `Can't check if the player is already in a game because the coordinator isn't available`
+      );
     }
 
     socket.on('disconnect',  () => this.onPlayerDisconnected(player));
@@ -241,6 +246,14 @@ export class Server {
    * @param player Player
    */
   private onPlayerStartSearch(player: Player): void {
+    if (!this.coordinator) {
+      this.logger.error(
+        'Server',
+        `Can't search for a game because the coordinator isn't available`
+      );
+      return;
+    }
+
     const currentGame = this.coordinator.getGame(player._id);
     if (currentGame) {
       this.logger.debug(

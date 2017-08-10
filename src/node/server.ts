@@ -3,6 +3,7 @@ import * as http from 'http';
 import * as socketio from 'socket.io';
 import * as socketioJwt from 'socketio-jwt';
 import { LoggerInterface } from '../common/logger/logger';
+import { GameStateManager } from './game/game-state-manager';
 
 /**
  * Socket.IO server.
@@ -11,6 +12,7 @@ export class Server {
   private config: ServerConfiguration;
   private httpServer: http.Server;
   private ioServer: SocketIO.Server;
+  private gameStateManager?: GameStateManager;
 
   /**
    * Constructor.
@@ -126,6 +128,19 @@ export class Server {
   }
 
   /**
+   * Set the game state manager.
+   *
+   * The state manager can't be injected in the
+   * constructor because of the circular reference.
+   *
+   * @param gameStateManager An instance of a game state manager
+   */
+  public setGameStateManager(gameStateManager: GameStateManager): this {
+    this.gameStateManager = gameStateManager;
+    return this;
+  }
+
+  /**
    * Initialize the Socket.IO server so it handles
    * JWT authentication.
    */
@@ -157,6 +172,8 @@ export class Server {
       'Node Server',
       `New client connected from ${socket.request.connection.remoteAddress}`
     );
+
+    // TODO
   }
 }
 
