@@ -12,74 +12,75 @@ import parseTimestring = require('timestring');
 // Load environment variables from .env file if available
 require('dotenv').config();
 
+// Parse settings
+const Settings = {
+  COORDINATOR_PORT: parseInt(process.env.COORDINATOR_PORT || '8080', 10),
+  COORDINATOR_STOP_TIMEOUT: parseTimestring(process.env.COORDINATOR_STOP_TIMEOUT || '30s', 'ms'),
+  COORDINATOR_TICK_INTERVAL: parseTimestring(process.env.COORDINATOR_TICK_INTERVAL || '5s', 'ms'),
+  DATA_DIR: process.env.DATA_DIR || 'data',
+  JWT_ALGORITHMS: (process.env.JWT_ALGORITHMS || 'RS256').split(','),
+  JWT_PUBLIC_CERT: process.env.JWT_PUBLIC_CERT || 'certs/jwt.pub',
+  LOCAL_PROVIDER_HOST: process.env.LOCAL_PROVIDER_HOST,
+  LOG_LEVEL: process.env.LOG_LEVEL || LogLevel.INFO,
+  MATCHMAKER_MAX_RANK_DIFFERENCE: parseInt(process.env.MATCHMAKER_MAX_RANK_DIFFERENCE || '500', 10),
+  MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost/fftt',
+  PROVIDER_MAX_NODES: parseInt(process.env.PROVIDER_MAX_NODES || '10', 10),
+  PROVIDER_MIN_PORT: parseInt(process.env.PROVIDER_MIN_PORT || '0', 10),
+  PROVIDER_MAX_PORT: parseInt(process.env.PROVIDER_MAX_PORT || '0', 10),
+  PROVIDER_NODE_TIMEOUT: parseTimestring(process.env.PROVIDER_NODE_TIMEOUT || '10mins', 'ms'),
+};
+
 // Init Logger
-const logLevel = process.env.LOG_LEVEL || LogLevel.INFO;
-if (!(logLevel in LogLevel)) {
-  throw new Error(`Invalid value for LOG_LEVEL environment variable: "${logLevel}"`);
+if (!(Settings.LOG_LEVEL in LogLevel)) {
+  throw new Error(`Invalid value for LOG_LEVEL environment variable: "${Settings.LOG_LEVEL}"`);
 }
-const logger = new PrettyLogger(logLevel as LogLevel);
+
+const logger = new PrettyLogger(Settings.LOG_LEVEL as LogLevel);
+logger.info('Main', 'Initializing...');
 
 // Connect to MongoDB
-const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost/fftt';
-mongoose.connect(mongoURI, {useMongoClient: true} as any);
+(mongoose as any).Promise = global.Promise;
+mongoose.connect(Settings.MONGODB_URI, {useMongoClient: true} as any);
 mongoose.connection.on('error', () => {
-  logger.error('Main', `Could not connect to MongoDB using the following URI: "${mongoURI}"`);
+  logger.error(
+    'Main',
+    `Could not connect to MongoDB using the following URI: "${Settings.MONGODB_URI}"
+  `);
   process.exit(255);
 });
 
 // Init node provider, matchmaker, server, coordinator, ...
-logger.info('Main', 'Initializing...');
-
 const cardsManager = new CardsManager(logger);
 
-const nodeProvider = new LocalProvider(
-  logger,
-  {
-    maxNodes: parseInt(process.env.PROVIDER_MAX_NODES || '10', 10),
-    minPort: parseInt(process.env.PROVIDER_MIN_PORT || '0', 10),
-    maxPort: parseInt(process.env.PROVIDER_MAX_PORT || '0', 10),
-    nodeTimeout: parseTimestring(process.env.PROVIDER_NODE_TIMEOUT || '10mins', 'ms'),
-    host: process.env.LOCAL_PROVIDER_HOST,
-    jwtPublicCert: process.env.JWT_PUBLIC_CERT || 'certs/jwt.pub',
-    jwtAlgorithms: (process.env.JWT_ALGORITHMS || 'RS256').split(','),
-  }
-);
+const nodeProvider = new LocalProvider(logger, {
+  host: Settings.LOCAL_PROVIDER_HOST,
+  maxNodes: Settings.PROVIDER_MAX_NODES,
+  minPort: Settings.PROVIDER_MIN_PORT,
+  maxPort: Settings.PROVIDER_MAX_PORT,
+  nodeTimeout: Settings.PROVIDER_NODE_TIMEOUT,
+  jwtAlgorithms: Settings.JWT_ALGORITHMS,
+  jwtPublicCert: Settings.JWT_PUBLIC_CERT,
+});
 
-const matchmaker = new Matchmaker(
-  logger,
-  nodeProvider,
-  {
-    maxRankDifference: parseInt(process.env.MATCHMAKER_MAX_RANK_DIFFERENCE || '500', 10),
-  }
-);
+const matchmaker = new Matchmaker(logger, nodeProvider, {
+  maxRankDifference: Settings.MATCHMAKER_MAX_RANK_DIFFERENCE,
+});
 
-const server = new Server(
-  logger,
-  matchmaker,
-  nodeProvider,
-  cardsManager,
-  {
-    port: parseInt(process.env.COORDINATOR_PORT || '8080', 10),
-    jwtPublicCert: process.env.JWT_PUBLIC_CERT || 'certs/jwt.pub',
-    jwtAlgorithms: (process.env.JWT_ALGORITHMS || 'RS256').split(','),
-  }
-);
+const server = new Server(matchmaker, nodeProvider, cardsManager, logger, {
+  port: Settings.COORDINATOR_PORT,
+  jwtAlgorithms: Settings.JWT_ALGORITHMS,
+  jwtPublicCert: Settings.JWT_PUBLIC_CERT,
+});
 
-const coordinator = new Coordinator(
-  logger,
-  nodeProvider,
-  matchmaker,
-  server,
-  {
-    tickInterval: parseTimestring(process.env.COORDINATOR_TICK_INTERVAL || '5secs', 'ms'),
-    stopTimeout: parseTimestring(process.env.COORDINATOR_STOP_TIMEOUT || '30secs', 'ms'),
-  },
-);
+const coordinator = new Coordinator(logger, nodeProvider, matchmaker, server, {
+  tickInterval: Settings.COORDINATOR_TICK_INTERVAL,
+  stopTimeout: Settings.COORDINATOR_STOP_TIMEOUT,
+});
 
 // Load data and boot coordinator
 new Promise(async () => {
   try {
-    await cardsManager.load(path.join(process.env.DATA_DIR || 'data', 'cards.json'));
+    await cardsManager.load(path.join(Settings.DATA_DIR, 'cards.json'));
     await coordinator.start();
   } catch (e) {
     logger.error('Main', 'Could not start server: ', e);
@@ -89,6 +90,7 @@ new Promise(async () => {
   logger.info('Main', 'Server is now running');
 });
 
+// Catch stop signals
 function onStopSignal(signal: string) {
   return async () => {
     logger.info('Main', `Received "${signal}" signal, stopping coordinator...`);

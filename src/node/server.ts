@@ -1,17 +1,15 @@
 import * as fs from 'fs';
-import * as http from 'http';
-import * as socketio from 'socket.io';
 import * as socketioJwt from 'socketio-jwt';
-import { LoggerInterface } from '../common/logger/logger';
+import { AbstractServer, DecodedToken } from '../common/server/abstract-server';
 import { GameStateManager } from './game/game-state-manager';
+import { LoggerInterface } from '../common/logger/logger';
+import { PlayerInfo } from '../common/dto/player-info';
 
 /**
  * Socket.IO server.
  */
-export class Server {
+export class Server extends AbstractServer {
   private config: ServerConfiguration;
-  private httpServer: http.Server;
-  private ioServer: SocketIO.Server;
   private gameStateManager?: GameStateManager;
 
   /**
@@ -21,17 +19,16 @@ export class Server {
    * @param config Server settings
    */
   public constructor(
-    private logger: LoggerInterface,
+    logger: LoggerInterface,
     config: ServerConfiguration,
   ) {
+    super(logger);
     this.config = { ...config };
-    this.httpServer = http.createServer();
-    this.ioServer = socketio(this.httpServer);
     this.initialize();
   }
 
   /**
-   * Start the server.
+   * @inheritdoc
    */
   public async start(): Promise<void> {
     this.logger.info('Server', 'Starting node server');
@@ -89,45 +86,6 @@ export class Server {
   }
 
   /**
-   * Stop the server.
-   */
-  public async stop(): Promise<void> {
-    await new Promise((resolve, reject) => {
-      if (this.httpServer && this.httpServer.listening) {
-        this.logger.info('Server', 'Stopping node server');
-
-        const rejectListener = (e: Error) => {
-          this.httpServer.removeListener('error', rejectListener);
-          reject(e);
-        };
-
-        this.httpServer
-          .on('error', rejectListener)
-          .close(() => {
-            this.logger.info('Server', 'Server stopped');
-            this.httpServer.removeListener('error', rejectListener);
-            resolve();
-          });
-      } else {
-        this.logger.warn('Server', 'Server was not running');
-        resolve();
-      }
-    });
-  }
-
-  /**
-   * Return the port the server is listening to
-   * or null if there isn't one.
-   */
-  public getPort(): number|null {
-    if (this.httpServer.listening) {
-      return this.httpServer.address().port;
-    }
-
-    return null;
-  }
-
-  /**
    * Set the game state manager.
    *
    * The state manager can't be injected in the
@@ -173,7 +131,70 @@ export class Server {
       `New client connected from ${socket.request.connection.remoteAddress}`
     );
 
-    // TODO
+    if (!this.gameStateManager) {
+      this.logger.error(
+        'Server',
+        `Can't register player because the game state manager isn't available`
+      );
+      socket.disconnect(true);
+      return;
+    }
+
+    const gameState = this.gameStateManager.getGameState();
+    const gameConfiguration = gameState.getConfig();
+    const playerInfo = gameConfiguration.players.find(
+      player => player.playerId === decodedToken.sub
+    );
+
+    // Check if the player is allowed to connect
+    if (!playerInfo) {
+      this.logger.warn(
+        'Server',
+        `An unexpected player tried to connect to the server: "${decodedToken.sub}"`
+      );
+      socket.disconnect(true);
+      return;
+    }
+
+    this.onPlayerRetrieved(socket, playerInfo);
+  }
+  /**
+   * Called when a player successfuly joined the
+   * server (after additional authorization checks).
+   *
+   * @param socket SocketIO Socket
+   * @param player Player
+   */
+  private onPlayerRetrieved(socket: SocketIO.Socket, player: PlayerInfo) {
+    this.logger.info('Server', `Player "${player.playerId}" joined the server`);
+
+    // Disconnect old socket if there is one
+    const oldSocket = this.sockets.get(player.playerId);
+    if (oldSocket) {
+      oldSocket.disconnect(true);
+    }
+
+    // Register new socket
+    this.sockets.set(player.playerId, socket);
+
+    // TODO Send current game state
+
+    socket.on('disconnect',  () => this.onPlayerDisconnected(socket, player));
+  }
+
+  /**
+   * Called when an authenticated player disconnects
+   * from the server.
+   *
+   * @param player Player
+   */
+  private onPlayerDisconnected(socket: SocketIO.Socket, player: PlayerInfo) {
+    // Only do something if this is the current socket for this player
+    const currentPlayerSocket = this.sockets.get(player.playerId);
+    if (currentPlayerSocket && (socket === currentPlayerSocket)) {
+      this.logger.info('Server', `Player "${player.playerId}" disconnected`);
+      this.sockets.delete(player.playerId);
+    }
   }
 }
 
@@ -182,8 +203,4 @@ export interface ServerConfiguration {
   maxPort: number;
   jwtPublicCert: string;
   jwtAlgorithms: string[];
-}
-
-interface DecodedToken {
-  sub: string;
 }

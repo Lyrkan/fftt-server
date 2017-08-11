@@ -28,7 +28,7 @@ export class LocalProvider extends NodeProvider<Node, LocalNodeConfiguration> {
         maxPort: this.config.maxPort,
         timeout: this.config.nodeTimeout,
         players: players.map(player => ({
-          playerId: player._id,
+          playerId: player.playerId,
           username: player.username,
           picture: player.picture,
           cards: player.cards,

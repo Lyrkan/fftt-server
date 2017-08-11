@@ -1,7 +1,6 @@
 import * as fs from 'fs';
-import * as http from 'http';
-import * as socketio from 'socket.io';
 import * as socketioJwt from 'socketio-jwt';
+import { AbstractServer, DecodedToken } from '../common/server/abstract-server';
 import { CardsManager } from '../common/cards/cards-manager';
 import { Coordinator } from './coordinator';
 import { Game } from './model/game';
@@ -15,43 +14,39 @@ import { randomCards } from '../common/cards/card-utils';
 /**
  * Socket.IO server.
  */
-export class Server {
+export class Server extends AbstractServer {
   private config: ServerConfiguration;
-  private httpServer: http.Server;
-  private ioServer: SocketIO.Server;
-  private sockets: Map<string, SocketIO.Socket>;
   private coordinator?: Coordinator;
 
   /**
    * Constructor.
    *
-   * @param logger       An instance of the logger service
    * @param matchmaker   An instance of the matchmaker service
    * @param nodeProvider An instance of a node provider
    * @param cardsManager An instance of a cards manager
+   * @param logger       An instance of the logger service
    * @param config       Server settings
    */
   public constructor(
-    private logger: LoggerInterface,
     private matchmaker: Matchmaker,
     private nodeProvider: NodeProvider<any, NodeConfiguration>,
     private cardsManager: CardsManager,
+    logger: LoggerInterface,
     config: ServerConfiguration,
   ) {
+    super(logger);
     this.config = { ...config };
-    this.httpServer = http.createServer();
-    this.ioServer = socketio(this.httpServer);
     this.initialize();
   }
 
   /**
-   * Start the server.
+   * @inheritdoc
    */
   public async start(): Promise<void> {
-    this.logger.info('Server', `Starting coordinator server on port "${this.config.port}"`);
+    this.logger.info('Server', `Starting server on port "${this.config.port}"`);
 
     if (this.httpServer.listening) {
-      throw new Error(`Server is already running on port ${this.httpServer.address().port}`);
+      throw new Error(`Server is already running on port ${this.getPort()}`);
     }
 
     await new Promise((resolve, reject) => {
@@ -67,33 +62,6 @@ export class Server {
           this.httpServer.removeListener('error', rejectListener);
           resolve();
         });
-    });
-  }
-
-  /**
-   * Stop the server.
-   */
-  public async stop(): Promise<void> {
-    await new Promise((resolve, reject) => {
-      if (this.httpServer && this.httpServer.listening) {
-        this.logger.info('Server', 'Stopping coordinator server');
-
-        const rejectListener = (e: Error) => {
-          this.httpServer.removeListener('error', rejectListener);
-          reject(e);
-        };
-
-        this.httpServer
-          .on('error', rejectListener)
-          .close(() => {
-            this.logger.info('Server', 'Server stopped');
-            this.httpServer.removeListener('error', rejectListener);
-            resolve();
-          });
-      } else {
-        this.logger.warn('Server', 'Server was not running');
-        resolve();
-      }
     });
   }
 
@@ -149,11 +117,11 @@ export class Server {
 
     if (playerId) {
       // If the user has an id, check if it exists in the database, create it otherwise
-      PlayerModel.findById(playerId).then(player => {
+      PlayerModel.findOne({ playerId }).then(player => {
         if (!player) {
           // If the player is missing in the db, create it with the default rank
           const newPlayer = new PlayerModel({
-            _id: playerId,
+            playerId,
             username: decodedToken.username || playerId,
             picture: decodedToken.picture || null,
             rank: DEFAULT_RANK,
@@ -169,7 +137,7 @@ export class Server {
               `An error occured while trying to create new player "${playerId}": `,
               e
             );
-            socket.disconnect();
+            socket.disconnect(true);
           });
         } else {
           this.logger.debug(
@@ -184,7 +152,7 @@ export class Server {
         'Server',
         `New client didn't have an ID in its token: ${JSON.stringify(decodedToken)}`
       );
-      socket.disconnect();
+      socket.disconnect(true);
     }
   }
 
@@ -197,12 +165,20 @@ export class Server {
    * @param player Player
    */
   private onPlayerRetrieved(socket: SocketIO.Socket, player: Player): void {
-    this.logger.info('Server', `Player "${player._id}" joined the server`);
-    this.sockets.set(player._id, socket);
+    this.logger.info('Server', `Player "${player.playerId}" joined the server`);
+
+    // Disconnect old socket if there is one
+    const oldSocket = this.sockets.get(player.playerId);
+    if (oldSocket) {
+      oldSocket.disconnect(true);
+    }
+
+    // Register new socket
+    this.sockets.set(player.playerId, socket);
 
     // Check if the player has cards, or drop some of them
     if (!player.cards.length) {
-      this.logger.debug('Server', `Player "${player._id}" has no card yet`);
+      this.logger.debug('Server', `Player "${player.playerId}" has no card yet`);
       this.dropCards(player, 10);
     }
 
@@ -211,9 +187,9 @@ export class Server {
 
     // Check if player is already in a game
     if (this.coordinator) {
-      const currentGame = this.coordinator.getGame(player._id);
+      const currentGame = this.coordinator.getGame(player.playerId);
       if (currentGame) {
-        this.logger.debug('Server', `Player "${player._id}" is already in a game`);
+        this.logger.debug('Server', `Player "${player.playerId}" is already in a game`);
         this.sendNodeInfo(player, currentGame);
       }
     } else {
@@ -223,7 +199,7 @@ export class Server {
       );
     }
 
-    socket.on('disconnect',  () => this.onPlayerDisconnected(player));
+    socket.on('disconnect',  () => this.onPlayerDisconnected(socket, player));
     socket.on('startSearch', () => this.onPlayerStartSearch(player));
     socket.on('stopSearch',  () => this.onPlayerStopSearch(player));
   }
@@ -234,10 +210,14 @@ export class Server {
    *
    * @param player Player
    */
-  private onPlayerDisconnected(player: Player): void {
-    this.logger.info('Server', `Player "${player._id}" disconnected`);
-    this.matchmaker.removePlayer(player._id);
-    this.sockets.delete(player._id);
+  private onPlayerDisconnected(socket: SocketIO.Socket, player: Player): void {
+    // Only do something if this is the current socket for this player
+    const currentPlayerSocket = this.sockets.get(player.playerId);
+    if (currentPlayerSocket && (socket === currentPlayerSocket)) {
+      this.logger.info('Server', `Player "${player.playerId}" disconnected`);
+      this.matchmaker.removePlayer(player.playerId);
+      this.sockets.delete(player.playerId);
+    }
   }
 
   /**
@@ -254,21 +234,21 @@ export class Server {
       return;
     }
 
-    const currentGame = this.coordinator.getGame(player._id);
+    const currentGame = this.coordinator.getGame(player.playerId);
     if (currentGame) {
       this.logger.debug(
         'Server',
-        `Player "${player._id}" tried to search for a game but is already in one`
+        `Player "${player.playerId}" tried to search for a game but is already in one`
       );
       this.sendNodeInfo(player, currentGame);
       return;
     }
 
-    this.logger.debug('Server', `Player "${player._id}" started searching for a game`);
-    this.matchmaker.addPlayer(player._id, (game: Game) => {
+    this.logger.debug('Server', `Player "${player.playerId}" started searching for a game`);
+    this.matchmaker.addPlayer(player.playerId, (game: Game) => {
       this.logger.debug(
         'Server',
-        `Found a game for player "${player._id}": "${game._id}" on node "${game.nodeId}"`
+        `Found a game for player "${player.playerId}": "${game.id}" on node "${game.nodeId}"`
       );
 
       this.sendNodeInfo(player, game);
@@ -281,8 +261,8 @@ export class Server {
    * @param player Player
    */
   private onPlayerStopSearch(player: Player): void {
-    this.logger.debug('Server', `Player "${player._id}" stopped searching for a game`);
-    this.matchmaker.removePlayer(player._id);
+    this.logger.debug('Server', `Player "${player.playerId}" stopped searching for a game`);
+    this.matchmaker.removePlayer(player.playerId);
   }
 
   /**
@@ -293,27 +273,23 @@ export class Server {
   private sendPlayerOwnInfo(player: Player): void {
     this.logger.debug(
       'Server',
-      `Sending own info to player "${player._id}"`
+      `Sending own info to player "${player.playerId}"`
     );
 
     try {
-      const socket = this.getPlayerSocket(player);
       const playerInfo: PlayerInfo = {
-        playerId: player._id,
+        playerId: player.playerId,
         username: player.username,
         picture: player.picture,
         cards: player.cards,
         rank: player.rank,
       };
 
-      socket.emit(
-        'playerInfo',
-        playerInfo,
-      );
+      this.sendEvent(player.playerId, 'playerInfo', playerInfo);
     } catch (e) {
       this.logger.debug(
         'Server',
-        `Could not send own info to player "${player._id}": `,
+        `Could not send own info to player "${player.playerId}": `,
         e
       );
     }
@@ -329,20 +305,20 @@ export class Server {
   private async sendNodeInfo(player: Player, game: Game): Promise<void> {
     this.logger.debug(
       'Server',
-      `Sending node info to player "${player._id}" for game "${game._id}"`
+      `Sending node info to player "${player.playerId}" for game "${game.id}"`
     );
 
     try {
       // Retrieve node info from provider and send it to the player
-      const socket = this.getPlayerSocket(player);
-      socket.emit(
+      this.sendEvent(
+        player.playerId,
         'nodeInfo',
         await this.nodeProvider.getNodeInfo(game.nodeId),
       );
     } catch (e) {
       this.logger.debug(
         'Server',
-        `Could not send game information to player "${player._id}": `,
+        `Could not send game information to player "${player.playerId}": `,
         e
       );
     }
@@ -355,7 +331,7 @@ export class Server {
    * @param count  Number of cards to give to the player
    */
   private async dropCards(player: Player, count: number = 1): Promise<void> {
-    this.logger.debug('Server', `Dropping ${count} cards for player "${player._id}"`);
+    this.logger.debug('Server', `Dropping ${count} cards for player "${player.playerId}"`);
 
     const cardsMap = this.cardsManager.getCardsMap();
     const newCards = randomCards([...cardsMap.values()], count);
@@ -364,30 +340,19 @@ export class Server {
       player.cards = player.cards.concat(newCards);
       await player.save();
 
-      const socket = this.getPlayerSocket(player);
-      socket.emit('newCards', newCards.map(cardId => cardsMap.get(cardId)));
+      // Notify player
+      this.sendEvent(
+        player.playerId,
+        'newCards',
+        newCards.map(cardId => cardsMap.get(cardId))
+      );
     } catch (e) {
       this.logger.error(
         'Server',
-        `Could not drop cards for player "${player._id}": `,
+        `Could not drop cards for player "${player.playerId}": `,
         e
       );
     }
-  }
-
-  /**
-   * Retrieve the current socket associated to a
-   * player or throw an error if there is none.
-   *
-   * @param player Player
-   */
-  private getPlayerSocket(player: Player) {
-    const socket = this.sockets.get(player._id);
-    if (!socket) {
-      throw new Error('Player is not associated to any active socket');
-    }
-
-    return socket;
   }
 }
 
@@ -395,10 +360,4 @@ export interface ServerConfiguration {
   port: number;
   jwtPublicCert: string;
   jwtAlgorithms: string[];
-}
-
-interface DecodedToken {
-  sub: string;
-  username?: string;
-  picture?: string;
 }

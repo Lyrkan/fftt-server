@@ -71,7 +71,7 @@ export class Matchmaker {
       try {
         const newGame = new GameModel({
           nodeId: await this.provider.createNode(group, StandardRuleset),
-          players: group.map(player => player._id),
+          players: group.map(player => player.playerId),
           status: GameStatus.UNKNOWN,
         });
         await newGame.save();
@@ -81,11 +81,11 @@ export class Matchmaker {
 
         // Call callbacks and remove players from the queue
         for (const player of group) {
-          const callback = this.playersQueue.get(player._id);
+          const callback = this.playersQueue.get(player.playerId);
           if (callback) {
             callback(newGame);
           }
-          this.removePlayer(player._id);
+          this.removePlayer(player.playerId);
         }
       } catch (e) {
         if (e instanceof NodesLimitReachedError) {
@@ -120,7 +120,7 @@ export class Matchmaker {
     for (const playerId of playerIds) {
       // Try to retrieve player from the db first
       try {
-        const player = await PlayerModel.findById(playerId);
+        const player = await PlayerModel.findOne({ playerId });
 
         if (player) {
           rankedPlayers.push(player);

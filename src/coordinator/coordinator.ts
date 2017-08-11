@@ -1,4 +1,4 @@
-import { Game } from './model/game';
+import { Game, GameModel } from './model/game';
 import { GameStatus } from '../common/statuses/game-status';
 import { LoggerInterface } from '../common/logger/logger';
 import { Matchmaker } from './matchmaker';
@@ -49,6 +49,13 @@ export class Coordinator {
     }
 
     this.logger.info('Coordinator', 'Starting');
+
+    // Load old not-ended games
+    this.games = await GameModel.where('status').ne(GameStatus.ENDED).exec();
+    this.logger.info(
+      'Coordinator',
+      `${this.games.length} previous game(s) loaded from the database`
+    );
 
     // Set running flags
     this.stopRequest = false;
