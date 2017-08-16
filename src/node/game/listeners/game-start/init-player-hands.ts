@@ -32,7 +32,7 @@ export class InitPlayerHands extends GameListener {
   public static trigger(
     stateManager: GameStateManager,
     gameState: GameState,
-    event: GameEvent
+    event: GameStartEvent
   ): void {
     const config = gameState.getConfig();
     const ruleset = config.ruleset;

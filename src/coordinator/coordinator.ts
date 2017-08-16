@@ -162,7 +162,7 @@ export class Coordinator {
         if (e instanceof NodeNotFoundError) {
           this.logger.warn(
             'Coordinator',
-            `Node "${game.nodeId} was registered to the coordinator but unknown from the provider`
+            `The provider could not find node "${game.nodeId}", removing it`
           );
         } else {
           this.logger.error(
