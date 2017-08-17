@@ -1,17 +1,16 @@
 import { GameEvent } from '../../game-event';
 import { GameListener } from '../../game-listener';
-import { GameStatus } from '../../../../common/statuses/game-status';
 import { GameState } from '../../game-state';
 import { GameStateManager } from '../../game-state-manager';
 import { InvalidEventError } from '../../errors/invalid-event-error';
-import { PlayerPickEvent } from '../../events/player-pick-event';
+import { PlayerMoveEvent } from '../../events/player-move-event';
 import { Ruleset } from '../../../../common/rules/ruleset';
 
 /**
- * This listener checks if the status of the game
- * allows that kind of event.
+ * This listener checks if a card can be placed at the
+ * given coordinates.
  */
-export class CheckGameStatus extends GameListener {
+export class CheckCoordinatesAvailability extends GameListener {
   /**
    * @inheritdoc
    */
@@ -23,7 +22,7 @@ export class CheckGameStatus extends GameListener {
    * @inheritdoc
    */
   public static supportsEvent(event: GameEvent): boolean {
-    return (event instanceof PlayerPickEvent);
+    return (event instanceof PlayerMoveEvent);
   }
 
   /**
@@ -32,14 +31,15 @@ export class CheckGameStatus extends GameListener {
   public static trigger(
     stateManager: GameStateManager,
     gameState: GameState,
-    event: PlayerPickEvent
+    event: PlayerMoveEvent
   ): void {
-    const status = gameState.getStatus();
-    const playerId = event.playerId;
+    const board = gameState.getBoard();
+    const coordinates = event.coordinates;
+    const currentState = board.getCardState(coordinates);
 
-    if (status !== GameStatus.PICK_PHASE) {
+    if (currentState.cardId) {
       throw new InvalidEventError(
-        `Player "${playerId}" tried to pick cards but this isn't the pick phase`
+        `Coordinates (${coordinates.x},${coordinates.y}) are already used by another card`
       );
     }
   }

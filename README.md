@@ -2,6 +2,8 @@
 FFTT Server
 ===
 
+*This project is still a work in progress but any remark is welcome*
+
 # Requirements
 
 * Node 6.10+

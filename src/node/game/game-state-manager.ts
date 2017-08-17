@@ -72,6 +72,8 @@ export class GameStateManager {
       const newState = this.gameState.clone();
 
       // Call listeners
+      // They will be able to modify the cloned game state
+      // and the event itself.
       this.gameListeners
         .filter(listener => listener.supportsEvent(event))
         .forEach(listener => listener.trigger(this, newState, event));
@@ -79,6 +81,8 @@ export class GameStateManager {
       // If none of the listeners threw an exception
       // switch the game state to the new one.
       this.gameState = newState;
+
+      // TODO Send new game state to players
     } catch (e) {
       if (e instanceof InvalidEventError) {
         this.logger.debug(

@@ -57,6 +57,7 @@ export class InitPlayerHands extends GameListener {
       }
 
       gameState.setPlayerHands(hands);
+      gameState.setStatus(GameStatus.IN_PROGRESS);
     } else {
       // No random modifier, start pick phase
       gameState.setStatus(GameStatus.PICK_PHASE);

@@ -3,15 +3,15 @@ import { GameListener } from '../../game-listener';
 import { GameStatus } from '../../../../common/statuses/game-status';
 import { GameState } from '../../game-state';
 import { GameStateManager } from '../../game-state-manager';
-import { InvalidEventError } from '../../errors/invalid-event-error';
 import { PlayerMoveEvent } from '../../events/player-move-event';
 import { Ruleset } from '../../../../common/rules/ruleset';
 
 /**
- * This listener checks if the status of the game
- * allows that kind of event.
+ * This listener ends a player turn by modifying
+ * the current player index, or by ending the game
+ * if the next player can't play anymore.
  */
-export class CheckGameStatus extends GameListener {
+export class EndTurn extends GameListener {
   /**
    * @inheritdoc
    */
@@ -34,13 +34,15 @@ export class CheckGameStatus extends GameListener {
     gameState: GameState,
     event: PlayerMoveEvent
   ): void {
-    const status = gameState.getStatus();
-    const playerId = event.playerId;
+    // Update new player
+    const hands = gameState.getPlayerHands();
+    const newPlayerIndex = (gameState.getCurrentPlayer() + 1) % hands.length;
+    gameState.setCurrentPlayer(newPlayerIndex);
 
-    if ((status !== GameStatus.IN_PROGRESS)) {
-      throw new InvalidEventError(
-        `Player "${playerId}" tried to play but the game isn't in progress`
-      );
+    // Check if the new player can play or
+    // end the game if that's not the case
+    if (!hands[newPlayerIndex].length) {
+      gameState.setStatus(GameStatus.ENDED);
     }
   }
 }

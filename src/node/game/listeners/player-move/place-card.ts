@@ -1,22 +1,19 @@
 import { GameEvent } from '../../game-event';
 import { GameListener } from '../../game-listener';
-import { GameStatus } from '../../../../common/statuses/game-status';
 import { GameState } from '../../game-state';
 import { GameStateManager } from '../../game-state-manager';
-import { InvalidEventError } from '../../errors/invalid-event-error';
 import { PlayerMoveEvent } from '../../events/player-move-event';
-import { Ruleset } from '../../../../common/rules/ruleset';
+import { Ruleset, PickModifier } from '../../../../common/rules/ruleset';
 
 /**
- * This listener checks if the status of the game
- * allows that kind of event.
+ * This listener place the chosen card on the board.
  */
-export class CheckGameStatus extends GameListener {
+export class PlaceCard extends GameListener {
   /**
    * @inheritdoc
    */
   public static supportsRuleset(ruleset: Ruleset): boolean {
-    return true;
+    return (ruleset.pickModifier === PickModifier.CHAOS);
   }
 
   /**
@@ -34,13 +31,12 @@ export class CheckGameStatus extends GameListener {
     gameState: GameState,
     event: PlayerMoveEvent
   ): void {
-    const status = gameState.getStatus();
-    const playerId = event.playerId;
+    const board = gameState.getBoard();
 
-    if ((status !== GameStatus.IN_PROGRESS)) {
-      throw new InvalidEventError(
-        `Player "${playerId}" tried to play but the game isn't in progress`
-      );
-    }
+    // Update the board with the new card
+    board.setCardState(event.coordinates, { cardId: event.cardId, playerId: event.playerId });
+
+    // Update game state
+    gameState.setBoard(board);
   }
 }

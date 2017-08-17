@@ -34,19 +34,12 @@ export class CheckCurrentPlayer extends GameListener {
     event: PlayerMoveEvent
   ): void {
     const currentPlayerIndex = gameState.getCurrentPlayer();
+    const eventPlayer = event.playerId;
+    const expectedPlayer = gameState.getConfig().players[currentPlayerIndex].playerId;
 
-    if (typeof currentPlayerIndex !== 'undefined') {
-      const eventPlayer = event.playerId;
-      const expectedPlayer = gameState.getConfig().players[currentPlayerIndex].playerId;
-
-      if (eventPlayer !== expectedPlayer) {
-        throw new InvalidEventError(
-          `Player "${event.playerId}" tried to play but it isn't its turn to do so`
-        );
-      }
-    } else {
+    if (eventPlayer !== expectedPlayer) {
       throw new InvalidEventError(
-        `Player "${event.playerId}" tried to play but current player is not defined`
+        `Player "${event.playerId}" tried to play but it isn't its turn to do so`
       );
     }
   }

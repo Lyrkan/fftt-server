@@ -35,6 +35,7 @@ export class CheckGameStatus extends GameListener {
     event: GameStartEvent
   ): void {
     const status = gameState.getStatus();
+
     if ((status !== GameStatus.STARTING)) {
       throw new InvalidEventError(
         `Can't start the game because its status doesn't allow it: ${status}`

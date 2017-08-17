@@ -54,7 +54,7 @@ export class GameState {
    * Return the index of the current player if
    * available.
    */
-  public getCurrentPlayer(): number | undefined {
+  public getCurrentPlayer(): number {
     return this.currentPlayer;
   }
 
@@ -75,7 +75,7 @@ export class GameState {
   /**
    * Return a copy of the current board.
    */
-  public getBoard(): GameBoard | undefined {
+  public getBoard(): GameBoard {
     return this.board.clone();
   }
 
@@ -93,7 +93,7 @@ export class GameState {
    * Return a copy of the current hand
    * for each player.
    */
-  public getPlayerHands(): string[][] | undefined {
+  public getPlayerHands(): string[][] {
     return this.playerHands.map(hand => [...hand]);
   }
 

@@ -13,8 +13,8 @@ export class PlayerPickEvent extends GameEvent {
    * @param cardIds   IDs of the chosen cards
    */
   public constructor(
-    public readonly playerId: string,
-    public readonly cardIds: string[],
+    public playerId: string,
+    public cardIds: string[],
   ) {
     super();
   }

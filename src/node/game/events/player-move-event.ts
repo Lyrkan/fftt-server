@@ -14,9 +14,9 @@ export class PlayerMoveEvent extends GameEvent {
    * @param coordinates Coordinates
    */
   public constructor(
-    public readonly playerId: string,
-    public readonly cardId: string,
-    public readonly coordinates: Coordinates,
+    public playerId: string,
+    public coordinates: Coordinates,
+    public cardId?: string,
   ) {
     super();
   }
