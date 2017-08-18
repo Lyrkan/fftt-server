@@ -57,6 +57,22 @@ export class CardsManager {
   }
 
   /**
+   * Return the card with the given ID if
+   * it exists, or throw an error if it doesn't.
+   *
+   * @param cardId Id of the card
+   */
+  public getCard(cardId: string): Card {
+    const card = this.cards.find(c => c.id === cardId);
+
+    if (!card) {
+      throw new Error(`Card "${cardId}" could not be found by the cards manager`);
+    }
+
+    return card;
+  }
+
+  /**
    * Return a copy of the cards array.
    */
   public getCards(): Card[] {

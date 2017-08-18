@@ -50,7 +50,7 @@ export class Swap extends GameListener {
         );
       }
 
-      // Swap one random card from player i et player (i + 1)
+      // Swap one random card from player i and player (i + 1)
       const indexA = Math.floor(Math.random() * hands[i].length);
       const indexB = Math.floor(Math.random() * hands[i + 1].length);
 

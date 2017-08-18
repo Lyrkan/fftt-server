@@ -6,6 +6,7 @@ import { CheckGameStatus } from './check-game-status';
 import { EndTurn } from './end-turn';
 import { GameListener } from '../../game-listener';
 import { PlaceCard } from './place-card';
+import { UpdateBoardState } from './update-board-state';
 
 export const PlayerMoveListeners: Array<typeof GameListener> = [
   // Pre-checks
@@ -17,10 +18,11 @@ export const PlayerMoveListeners: Array<typeof GameListener> = [
   // Chaos modifier
   ChaosPickCard,
 
-  // Place card on board
+  // Place new card on board
   PlaceCard,
 
-  // TODO Update board state
+  // Update board state
+  UpdateBoardState,
 
   // End turn
   EndTurn,

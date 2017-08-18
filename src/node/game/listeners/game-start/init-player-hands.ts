@@ -4,7 +4,7 @@ import { GameStartEvent } from '../../events/game-start-event';
 import { GameState } from '../../game-state';
 import { GameStateManager } from '../../game-state-manager';
 import { GameStatus } from '../../../../common/statuses/game-status';
-import { Ruleset, HandModifier } from '../../../../common/rules/ruleset';
+import { HandModifier } from '../../../../common/rules/ruleset';
 
 /**
  * This listener either initializes player hands
@@ -12,13 +12,6 @@ import { Ruleset, HandModifier } from '../../../../common/rules/ruleset';
  * phase.
  */
 export class InitPlayerHands extends GameListener {
-  /**
-   * @inheritdoc
-   */
-  public static supportsRuleset(ruleset: Ruleset): boolean {
-    return true;
-  }
-
   /**
    * @inheritdoc
    */

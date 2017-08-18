@@ -74,6 +74,17 @@ export class GameBoard {
   }
 
   /**
+   * Check if the board is full.
+   */
+  public isFull(): boolean {
+    return this.states.filter(
+      column => column.filter(
+        state => state.cardId
+      ).length > 0
+    ).length > 0;
+  }
+
+  /**
    * Clone the current board.
    */
   public clone(): GameBoard {

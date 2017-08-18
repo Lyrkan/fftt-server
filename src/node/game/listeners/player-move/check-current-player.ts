@@ -4,20 +4,12 @@ import { GameState } from '../../game-state';
 import { GameStateManager } from '../../game-state-manager';
 import { InvalidEventError } from '../../errors/invalid-event-error';
 import { PlayerMoveEvent } from '../../events/player-move-event';
-import { Ruleset } from '../../../../common/rules/ruleset';
 
 /**
  * This listener checks if the player associated to the
  * event is the one that should actually be playing.
  */
 export class CheckCurrentPlayer extends GameListener {
-  /**
-   * @inheritdoc
-   */
-  public static supportsRuleset(ruleset: Ruleset): boolean {
-    return true;
-  }
-
   /**
    * @inheritdoc
    */

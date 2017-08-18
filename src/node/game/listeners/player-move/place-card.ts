@@ -3,19 +3,11 @@ import { GameListener } from '../../game-listener';
 import { GameState } from '../../game-state';
 import { GameStateManager } from '../../game-state-manager';
 import { PlayerMoveEvent } from '../../events/player-move-event';
-import { Ruleset, PickModifier } from '../../../../common/rules/ruleset';
 
 /**
  * This listener place the chosen card on the board.
  */
 export class PlaceCard extends GameListener {
-  /**
-   * @inheritdoc
-   */
-  public static supportsRuleset(ruleset: Ruleset): boolean {
-    return (ruleset.pickModifier === PickModifier.CHAOS);
-  }
-
   /**
    * @inheritdoc
    */

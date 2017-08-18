@@ -1,49 +1,33 @@
 import { GameInfo } from '../common/dto/game-info';
 import { GameStateManager } from './game/game-state-manager';
-import { LoggerDecorator } from './logger/logger-decorator';
 import { LoggerInterface } from '../common/logger/logger';
 import { NodeStatus } from '../common/statuses/node-status';
-import { PlayerInfo } from '../common/dto/player-info';
-import { Ruleset } from '../common/rules/ruleset';
 import { Server } from './server';
 
 /**
  * Game node
  */
 export class Node {
-  private logger: LoggerInterface;
   private config: NodeConfiguration;
-  private gameStateManager: GameStateManager;
-  private server: Server;
   private status: NodeStatus;
   private nodeTimeout: NodeJS.Timer|null;
 
   /**
    * Constructor.
    *
-   * @param logger An instance of the logger service
-   * @param config Node settings
+   * @param logger           An instance of the logger service
+   * @param server           An instance of the server
+   * @param gameStateManager An instance of the game state manager service
+   * @param config           Node settings
    */
-  public constructor(logger: LoggerInterface, config: NodeConfiguration) {
+  public constructor(
+    private logger: LoggerInterface,
+    private server: Server,
+    private gameStateManager: GameStateManager,
+    config: NodeConfiguration
+  ) {
     this.config = { ...config };
     this.status = NodeStatus.STOPPED;
-
-    // TODO Instanciate the logger elsewhere
-    this.logger = new LoggerDecorator(logger, config.nodeId);
-
-    // TODO Instanciate the server elsewhere
-    this.server = new Server(this.logger, {
-      jwtPublicCert: this.config.jwtPublicCert,
-      jwtAlgorithms: this.config.jwtAlgorithms,
-      minPort: this.config.minPort,
-      maxPort: this.config.maxPort,
-    });
-
-    // TODO Instanciate the game state manager elsewhere
-    this.gameStateManager = new GameStateManager(this.logger, this.server, {
-      players: this.config.players,
-      ruleset: this.config.ruleset,
-    });
   }
 
   /**
@@ -159,11 +143,5 @@ export class Node {
 
 export interface NodeConfiguration {
   readonly nodeId: string;
-  jwtPublicCert: string;
-  jwtAlgorithms: string[];
-  minPort: number;
-  maxPort: number;
-  players: PlayerInfo[];
-  ruleset: Ruleset;
   timeout: number;
 }

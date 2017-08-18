@@ -5,20 +5,12 @@ import { GameStartEvent } from '../../events/game-start-event';
 import { GameState } from '../../game-state';
 import { GameStateManager } from '../../game-state-manager';
 import { InvalidEventError } from '../../errors/invalid-event-error';
-import { Ruleset } from '../../../../common/rules/ruleset';
 
 /**
  * This listener checks if the status of the game
  * allows that kind of event.
  */
 export class CheckGameStatus extends GameListener {
-  /**
-   * @inheritdoc
-   */
-  public static supportsRuleset(ruleset: Ruleset): boolean {
-    return true;
-  }
-
   /**
    * @inheritdoc
    */

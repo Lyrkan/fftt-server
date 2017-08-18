@@ -18,7 +18,7 @@ export abstract class GameListener {
    * @param ruleset Game rules
    */
   public static supportsRuleset(ruleset: Ruleset): boolean {
-    return false;
+    return true;
   }
 
   /**

@@ -1,3 +1,4 @@
+import { CardsManager } from '../../common/cards/cards-manager';
 import { GameEvent } from './game-event';
 import { GameListener } from './game-listener';
 import { GameListeners } from './listeners';
@@ -19,14 +20,16 @@ export class GameStateManager {
   /**
    * Constructor.
    *
-   * @param logger    An instance of the logger service
-   * @param server    An instance of a node server
-   * @param config    Game settings
-   * @param listeners An array containing all available listeners
+   * @param logger       An instance of the logger service
+   * @param server       An instance of a node server
+   * @param cardsManager An instance of a cards manager
+   * @param config       Game settings
+   * @param listeners    An array containing all available listeners
    */
   public constructor(
     private logger: LoggerInterface,
     private server: Server,
+    private cardsManager: CardsManager,
     config: GameStateConfiguration,
     listeners: Array<typeof GameListener> = GameListeners
   ) {
@@ -112,6 +115,13 @@ export class GameStateManager {
    */
   public getServer(): Server {
     return this.server;
+  }
+
+  /**
+   * Return the current instance of the cards manager.
+   */
+  public getCardsManager(): CardsManager {
+    return this.cardsManager;
   }
 
   /**

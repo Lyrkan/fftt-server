@@ -5,20 +5,13 @@ import { GameStateManager } from '../../game-state-manager';
 import { InvalidEventError } from '../../errors/invalid-event-error';
 import { InvalidStateError } from '../../errors/invalid-state-error';
 import { PlayerMoveEvent } from '../../events/player-move-event';
-import { Ruleset, PickModifier } from '../../../../common/rules/ruleset';
+import { PickModifier } from '../../../../common/rules/ruleset';
 
 /**
  * This listener checks if the card chosen by the
  * player is allowed to be placed on the board.
  */
 export class CheckChosenCard extends GameListener {
-  /**
-   * @inheritdoc
-   */
-  public static supportsRuleset(ruleset: Ruleset): boolean {
-    return true;
-  }
-
   /**
    * @inheritdoc
    */

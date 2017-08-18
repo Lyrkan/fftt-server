@@ -10,6 +10,11 @@ import { Player } from '../../model/player';
 import { Ruleset } from '../../../common/rules/ruleset';
 
 export class NullProvider extends NodeProvider<string, NodeConfiguration> {
+  /**
+   * Constructor.
+   *
+   * @param logger An instance of the logger service
+   */
   public constructor(logger: LoggerInterface) {
     super(logger, {
       jwtPublicCert: '',
@@ -21,12 +26,18 @@ export class NullProvider extends NodeProvider<string, NodeConfiguration> {
     });
   }
 
+  /**
+   * @inheritdoc
+   */
   public async createNode(players: Player[], ruleset: Ruleset): Promise<string> {
     const nodeId = uuid.v4();
     this.currentNodes.set(nodeId, nodeId);
     return nodeId;
   }
 
+  /**
+   * @inheritdoc
+   */
   public async stopNode(nodeId: string): Promise<void> {
     if (!this.currentNodes.has(nodeId)) {
       throw new NodeNotFoundError(nodeId);
@@ -35,6 +46,9 @@ export class NullProvider extends NodeProvider<string, NodeConfiguration> {
     this.currentNodes.delete(nodeId);
   }
 
+  /**
+   * @inheritdoc
+   */
   public async getNodeInfo(nodeId: string): Promise<NodeInfo> {
     if (!this.currentNodes.has(nodeId)) {
       throw new NodeNotFoundError(nodeId);
@@ -48,6 +62,9 @@ export class NullProvider extends NodeProvider<string, NodeConfiguration> {
     };
   }
 
+  /**
+   * @inheritdoc
+   */
   public async getGameInfo(nodeId: string): Promise<GameInfo> {
     if (!this.currentNodes.has(nodeId)) {
       throw new NodeNotFoundError(nodeId);

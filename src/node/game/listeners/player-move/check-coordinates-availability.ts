@@ -4,20 +4,12 @@ import { GameState } from '../../game-state';
 import { GameStateManager } from '../../game-state-manager';
 import { InvalidEventError } from '../../errors/invalid-event-error';
 import { PlayerMoveEvent } from '../../events/player-move-event';
-import { Ruleset } from '../../../../common/rules/ruleset';
 
 /**
  * This listener checks if a card can be placed at the
  * given coordinates.
  */
 export class CheckCoordinatesAvailability extends GameListener {
-  /**
-   * @inheritdoc
-   */
-  public static supportsRuleset(ruleset: Ruleset): boolean {
-    return true;
-  }
-
   /**
    * @inheritdoc
    */

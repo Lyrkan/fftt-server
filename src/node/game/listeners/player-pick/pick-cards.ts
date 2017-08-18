@@ -4,20 +4,12 @@ import { GameState } from '../../game-state';
 import { GameStateManager } from '../../game-state-manager';
 import { InvalidEventError } from '../../errors/invalid-event-error';
 import { PlayerPickEvent } from '../../events/player-pick-event';
-import { Ruleset } from '../../../../common/rules/ruleset';
 
 /**
  * This listener checks if the chosen card are
  * available and add them to the player's hand.
  */
 export class PickCards extends GameListener {
-  /**
-   * @inheritdoc
-   */
-  public static supportsRuleset(ruleset: Ruleset): boolean {
-    return true;
-  }
-
   /**
    * @inheritdoc
    */

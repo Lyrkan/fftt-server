@@ -4,7 +4,6 @@ import { GameStatus } from '../../../../common/statuses/game-status';
 import { GameState } from '../../game-state';
 import { GameStateManager } from '../../game-state-manager';
 import { PlayerMoveEvent } from '../../events/player-move-event';
-import { Ruleset } from '../../../../common/rules/ruleset';
 
 /**
  * This listener ends a player turn by modifying
@@ -12,13 +11,6 @@ import { Ruleset } from '../../../../common/rules/ruleset';
  * if the next player can't play anymore.
  */
 export class EndTurn extends GameListener {
-  /**
-   * @inheritdoc
-   */
-  public static supportsRuleset(ruleset: Ruleset): boolean {
-    return true;
-  }
-
   /**
    * @inheritdoc
    */
@@ -42,6 +34,12 @@ export class EndTurn extends GameListener {
     // Check if the new player can play or
     // end the game if that's not the case
     if (!hands[newPlayerIndex].length) {
+      gameState.setStatus(GameStatus.ENDED);
+    }
+
+    // Check if the board is full
+    const board = gameState.getBoard();
+    if (board.isFull()) {
       gameState.setStatus(GameStatus.ENDED);
     }
   }

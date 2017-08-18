@@ -52,7 +52,7 @@ mongoose.connection.on('error', () => {
 // Init node provider, matchmaker, server, coordinator, ...
 const cardsManager = new CardsManager(logger);
 
-const nodeProvider = new LocalProvider(logger, {
+const nodeProvider = new LocalProvider(logger, cardsManager, {
   host: Settings.LOCAL_PROVIDER_HOST,
   maxNodes: Settings.PROVIDER_MAX_NODES,
   minPort: Settings.PROVIDER_MIN_PORT,
